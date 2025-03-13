@@ -45,29 +45,15 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     case 'MAKE_MOVE': {
       try {
         const newGame = new Chess(state.gameInstance.fen());
-        const result = newGame.move({
-          from: action.move.from,
-          to: action.move.to,
-          promotion: action.move.promotion || undefined
-        });
+        const result = newGame.move(action.move);
 
         if (!result) return state;
-
-        // If this is the first move, set status to playing
-        const newStatus = state.status === 'waiting' 
-          ? 'playing' 
-          : getGameStatus(newGame);
 
         return {
           ...state,
           gameInstance: newGame,
           currentPlayer: newGame.turn(),
-          status: newStatus,
-          startTime: state.startTime || new Date(),
-          lastMove: {
-            from: action.move.from,
-            to: action.move.to
-          },
+          status: state.status === 'waiting' ? 'playing' : getGameStatus(newGame),
           moveHistory: [...state.moveHistory, result.san]
         };
       } catch (error) {

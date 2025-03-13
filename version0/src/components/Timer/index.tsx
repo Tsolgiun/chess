@@ -1,77 +1,39 @@
-import React, { useEffect, useCallback } from 'react';
-import styled from 'styled-components';
+import React, { useEffect, useRef } from 'react';
 import { useGame } from '../../context/GameContext';
 
-const TimerContainer = styled.div`
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 20px;
-  gap: 20px;
-`;
+interface TimerProps {
+  color: 'w' | 'b';
+}
 
-const PlayerTimer = styled.div<{ $active: boolean }>`
-  flex: 1;
-  padding: 15px;
-  border-radius: 8px;
-  background-color: ${props => props.$active ? 'var(--accent-color)' : 'var(--secondary-color)'};
-  color: ${props => props.$active ? 'var(--primary-color)' : 'var(--text-primary)'};
-  text-align: center;
-  transition: background-color 0.3s ease;
-`;
-
-const Time = styled.div`
-  font-size: 1.5em;
-  font-weight: bold;
-  font-family: monospace;
-`;
-
-const formatTime = (seconds: number): string => {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-};
-
-const Timer: React.FC = () => {
+const Timer: React.FC<TimerProps> = ({ color }) => {
   const { state, dispatch } = useGame();
-  const isWhiteActive = state.currentPlayer === 'w' && state.status === 'playing';
-  const isBlackActive = state.currentPlayer === 'b' && state.status === 'playing';
-
-  const updateTime = useCallback((color: 'w' | 'b') => {
-    const player = color === 'w' ? state.playerWhite : state.playerBlack;
-    if (player.timeLeft !== undefined && player.timeLeft > 0) {
-      const newTime = player.timeLeft - 1;
-      dispatch({ type: 'UPDATE_TIME', color, timeLeft: newTime });
-
-      if (newTime === 0) {
-        dispatch({ type: 'GAME_OVER', result: 'checkmate' });
-      }
-    }
-  }, [dispatch, state.playerWhite.timeLeft, state.playerBlack.timeLeft]);
+  const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const player = color === 'w' ? state.playerWhite : state.playerBlack;
+  const isActive = state.currentPlayer === color && state.status === 'playing';
+  const timeLeft = player.timeLeft ?? 0;
 
   useEffect(() => {
-    if (state.status !== 'playing') return;
+    if (isActive && timeLeft > 0) {
+      intervalRef.current = setInterval(() => {
+        dispatch({ type: 'UPDATE_TIME', color, timeLeft: timeLeft - 1 });
+      }, 1000);
+    }
 
-    const interval = setInterval(() => {
-      if (state.currentPlayer === 'w') {
-        updateTime('w');
-      } else {
-        updateTime('b');
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
       }
-    }, 1000);
+    };
+  }, [isActive, timeLeft, color, dispatch]);
 
-    return () => clearInterval(interval);
-  }, [state.status, state.currentPlayer, updateTime]);
+  useEffect(() => {
+    if (timeLeft <= 0 && isActive) {
+      dispatch({ type: 'GAME_OVER', result: 'checkmate' });
+    }
+  }, [timeLeft, isActive, dispatch]);
 
-  return (
-    <TimerContainer>
-      <PlayerTimer $active={isBlackActive}>
-        <Time>{formatTime(state.playerBlack.timeLeft || 0)}</Time>
-      </PlayerTimer>
-      <PlayerTimer $active={isWhiteActive}>
-        <Time>{formatTime(state.playerWhite.timeLeft || 0)}</Time>
-      </PlayerTimer>
-    </TimerContainer>
-  );
+  return null;
 };
 
 export default Timer;
+

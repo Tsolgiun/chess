@@ -51,7 +51,7 @@ const GameControls: React.FC = () => {
   };
 
   const handleResign = () => {
-    dispatch({ type: 'RESIGN', color: state.currentPlayer });
+    dispatch({ type: 'RESIGN' });
   };
 
   return (

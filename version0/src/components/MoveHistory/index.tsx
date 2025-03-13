@@ -29,12 +29,6 @@ const HistoryTitle = styled.h3`
   font-size: 1.1em;
 `;
 
-const MoveList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`;
-
 const MoveRow = styled.div`
   display: grid;
   grid-template-columns: 30px 1fr 1fr;
@@ -73,15 +67,13 @@ const MoveHistory: React.FC = () => {
   return (
     <HistoryContainer>
       <HistoryTitle>Move History</HistoryTitle>
-      <MoveList>
-        {moveGroups.map((moves, index) => (
-          <MoveRow key={index}>
-            <MoveNumber>{index + 1}.</MoveNumber>
-            <Move>{moves[0]}</Move>
-            {moves[1] && <Move>{moves[1]}</Move>}
-          </MoveRow>
-        ))}
-      </MoveList>
+      {moveGroups.map((moves, index) => (
+        <MoveRow key={index}>
+          <MoveNumber>{index + 1}.</MoveNumber>
+          <Move>{moves[0]}</Move>
+          {moves[1] && <Move>{moves[1]}</Move>}
+        </MoveRow>
+      ))}
     </HistoryContainer>
   );
 };

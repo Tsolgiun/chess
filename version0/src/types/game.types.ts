@@ -11,6 +11,7 @@ export interface PlayerInfo {
 export interface TimeControl {
   initial: number;
   increment: number;
+  lastTickTime?: number;
 }
 
 export interface GameState {
