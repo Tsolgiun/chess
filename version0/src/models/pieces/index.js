@@ -1,6 +1,0 @@
-export { default as Pawn } from './Pawn.js';
-export { default as Knight } from './Knight.js';
-export { default as Bishop } from './Bishop.js';
-export { default as Rook } from './Rook.js';
-export { default as Queen } from './Queen.js';
-export { default as King } from './King.js'; 
