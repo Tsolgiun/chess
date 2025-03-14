@@ -18,7 +18,7 @@ const DEFAULT_POSITION = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0
 const GameRoom: React.FC = () => {
   const params = useParams();
   const gameId = params.gameId;
-  const { socket, isConnected, connectionStatus } = useSocket();
+  const { socket, isConnected, connectionStatus, queueMove, joinRoom } = useSocket();
   const { user } = useAuthStore();
   const [game, setGame] = useState<Game | null>(null);
   const [currentMove, setCurrentMove] = useState<Move | null>(null);
@@ -26,14 +26,18 @@ const GameRoom: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [socketJoined, setSocketJoined] = useState(false);
   
+  // Track room membership state
+  const [isInRoom, setIsInRoom] = useState(false);
+  
   // Chess instance as the single source of truth for the board position
   const chessRef = useRef<Chess>(new Chess(DEFAULT_POSITION));
   
   // Track last received game state to prevent duplicates
   const lastGameStateRef = useRef<string>('');
   
-  // Track if we've already joined the room
-  const roomJoinedRef = useRef<boolean>(false);
+  // State for tracking move status
+  const [moveStatus, setMoveStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
+  const moveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Add debug info (only in development)
   const addDebugInfo = useCallback((info: string) => {
@@ -54,19 +58,47 @@ const GameRoom: React.FC = () => {
     }
   }, [game?.position, addDebugInfo]);
 
-  // Socket connection and game room joining
+  // Room joining logic
+  useEffect(() => {
+    if (!socket || !gameId) return;
+    
+    // Join room when connected and not already in room
+    if (isConnected && !isInRoom) {
+      addDebugInfo(`Joining game room: ${gameId}`);
+      joinRoom(gameId);
+      setSocketJoined(true);
+    }
+    
+    // Handle successful room join
+    const handlePlayerJoined = (data: { userId: string; timestamp: Date }) => {
+      addDebugInfo(`Player joined: ${data.userId}`);
+      if (data.userId === user?._id) {
+        setIsInRoom(true);
+      }
+    };
+    
+    // Re-join room on reconnection
+    const handleReconnect = () => {
+      addDebugInfo('Reconnected, rejoining game room');
+      if (gameId) {
+        joinRoom(gameId);
+      }
+    };
+    
+    socket.on('player-joined', handlePlayerJoined);
+    socket.on('reconnect', handleReconnect);
+    
+    return () => {
+      socket.off('player-joined', handlePlayerJoined);
+      socket.off('reconnect', handleReconnect);
+    };
+  }, [socket, gameId, isConnected, isInRoom, user, addDebugInfo, joinRoom]);
+
+  // Socket connection and game state handling
   useEffect(() => {
     // Always show the board even if socket isn't connected yet
     if (!socket) {
       return;
-    }
-    
-    // Only join the room once when connected
-    if (isConnected && !roomJoinedRef.current && gameId) {
-      addDebugInfo(`Joining game room: ${gameId}`);
-      socket.emit('join-game', gameId);
-      roomJoinedRef.current = true;
-      setSocketJoined(true);
     }
 
     // Handle game state updates
@@ -96,6 +128,22 @@ const GameRoom: React.FC = () => {
       
       addDebugInfo(`Received game state: ${JSON.stringify(gameState).substring(0, 100)}...`);
       
+      // If we have a pending move and received a new game state, it was likely successful
+      if (moveStatus === 'pending') {
+        setMoveStatus('success');
+        
+        // Reset move status after a delay
+        setTimeout(() => {
+          setMoveStatus('idle');
+        }, 1000);
+        
+        // Clear any pending timeout
+        if (moveTimeoutRef.current) {
+          clearTimeout(moveTimeoutRef.current);
+          moveTimeoutRef.current = null;
+        }
+      }
+      
       setGame(prev => ({
         ...prev,
         ...gameState,
@@ -110,20 +158,51 @@ const GameRoom: React.FC = () => {
     const handleMove = (moveData: Move) => {
       addDebugInfo(`Received move: ${JSON.stringify(moveData)}`);
       setCurrentMove(moveData);
+      
+      // If this is our move and it's pending, mark it as successful
+      if (moveData.playerId === user?._id && moveStatus === 'pending') {
+        setMoveStatus('success');
+        
+        // Reset move status after a delay
+        setTimeout(() => {
+          setMoveStatus('idle');
+        }, 1000);
+        
+        // Clear any pending timeout
+        if (moveTimeoutRef.current) {
+          clearTimeout(moveTimeoutRef.current);
+          moveTimeoutRef.current = null;
+        }
+      }
     };
 
     // Handle errors
     const handleError = (error: { message: string }) => {
       addDebugInfo(`Socket error: ${error.message}`);
       setError(error.message);
+      
+      // If we have a pending move, mark it as failed
+      if (moveStatus === 'pending') {
+        setMoveStatus('error');
+        
+        // Reset move status after a delay
+        setTimeout(() => {
+          setMoveStatus('idle');
+        }, 1000);
+        
+        // Clear any pending timeout
+        if (moveTimeoutRef.current) {
+          clearTimeout(moveTimeoutRef.current);
+          moveTimeoutRef.current = null;
+        }
+      }
     };
 
-    // Handle reconnection
-    const handleReconnect = () => {
-      // Reset joined flag to rejoin the room
-      if (roomJoinedRef.current) {
-        addDebugInfo('Reconnected, rejoining game room');
-        socket.emit('join-game', gameId);
+    // Handle player leaving
+    const handlePlayerLeft = (data: { userId: string; timestamp: Date }) => {
+      addDebugInfo(`Player left: ${data.userId}`);
+      if (data.userId === user?._id) {
+        setIsInRoom(false);
       }
     };
 
@@ -131,26 +210,23 @@ const GameRoom: React.FC = () => {
     socket.on('game-state', handleGameState);
     socket.on('move', handleMove);
     socket.on('error', handleError);
-    socket.on('reconnect', handleReconnect);
-
-    // Ping/pong to keep connection alive
-    const pingInterval = setInterval(() => {
-      if (socket.connected) {
-        socket.emit('ping');
-      }
-    }, 25000);
+    socket.on('player-left', handlePlayerLeft);
 
     // Cleanup when component unmounts
     return () => {
-      clearInterval(pingInterval);
       socket.off('game-state', handleGameState);
       socket.off('move', handleMove);
       socket.off('error', handleError);
-      socket.off('reconnect', handleReconnect);
+      socket.off('player-left', handlePlayerLeft);
+      
+      if (moveTimeoutRef.current) {
+        clearTimeout(moveTimeoutRef.current);
+        moveTimeoutRef.current = null;
+      }
       
       // Don't leave the room on unmount to maintain connection
     };
-  }, [socket, gameId, isConnected, addDebugInfo]);
+  }, [socket, gameId, addDebugInfo, moveStatus, user?._id]);
 
   // Determine if it's the player's turn
   const isPlayersTurn = game?.currentTurn === user?._id;
@@ -160,34 +236,73 @@ const GameRoom: React.FC = () => {
   const blackPlayer = game?.black || { _id: '', username: 'Black Player', rating: 1200, email: '' };
   const gameState = game?.state || 'waiting';
 
-  const handleMove = (move: Partial<Move>) => {
-    if (!socket || !gameId || !user || !isConnected) return;
+  const handleMove = async (move: Partial<Move>) => {
+    if (!gameId || !user) return;
     
-    // Validate move using chess.js
-    try {
-      const chessMove = chessRef.current.move({
-        from: move.from!,
-        to: move.to!,
-        promotion: move.promotion
-      });
+    // Retry join room if needed
+    if (!isInRoom && socket) {
+      addDebugInfo('Not in room, attempting to join before move');
+      joinRoom(gameId);
       
-      if (chessMove) {
-        const fullMove: Move = {
-          from: move.from!,
-          to: move.to!,
-          promotion: move.promotion,
-          timestamp: new Date(),
-          playerId: user._id
+      // Wait for room join confirmation
+      await new Promise<boolean>(resolve => {
+        const timeout = setTimeout(() => resolve(false), 1000);
+        
+        const handleJoin = (data: { userId: string }) => {
+          if (data.userId === user._id) {
+            clearTimeout(timeout);
+            socket.off('player-joined', handleJoin);
+            setIsInRoom(true);
+            resolve(true);
+          }
         };
-
-        addDebugInfo(`Emitting move: ${JSON.stringify(fullMove)}`);
-        socket.emit('move', { gameId, move: fullMove });
-      } else {
-        addDebugInfo("Invalid move");
-      }
-    } catch (error) {
-      addDebugInfo(`Move error: ${error}`);
+        
+        socket.on('player-joined', handleJoin);
+        
+        // Clean up listener if promise resolves/rejects
+        setTimeout(() => {
+          socket.off('player-joined', handleJoin);
+        }, 1100);
+      });
     }
+    
+    // Set move status to pending immediately
+    setMoveStatus('pending');
+    
+    // Create the full move object
+    const fullMove: Move = {
+      from: move.from!,
+      to: move.to!,
+      promotion: move.promotion,
+      timestamp: new Date(),
+      playerId: user._id
+    };
+    
+    addDebugInfo(`Emitting move: ${JSON.stringify(fullMove)}`);
+    
+    // Use the queueMove function instead of direct socket emit
+    if (isConnected && socket) {
+      socket.emit('move', { gameId, move: fullMove });
+    } else {
+      // If not connected, queue the move for later
+      queueMove(gameId, fullMove);
+    }
+    
+    // Set a timeout to revert to server state if no response
+    if (moveTimeoutRef.current) {
+      clearTimeout(moveTimeoutRef.current);
+    }
+    
+    moveTimeoutRef.current = setTimeout(() => {
+      if (moveStatus === 'pending') {
+        setMoveStatus('error');
+        
+        // Reset move status after showing error
+        setTimeout(() => {
+          setMoveStatus('idle');
+        }, 1000);
+      }
+    }, 5000); // 5 second timeout
   };
 
   // Error state
@@ -207,6 +322,9 @@ const GameRoom: React.FC = () => {
       </div>
     );
   }
+
+  // Get the current position from the chess instance
+  const currentPosition = chessRef.current ? chessRef.current.fen() : DEFAULT_POSITION;
 
   return (
     <div className="game-room">
@@ -242,10 +360,11 @@ const GameRoom: React.FC = () => {
 
         <div className="game-board">
           <Chessboard
-            position={chessRef.current.fen()}
+            position={currentPosition}
             orientation={user?._id === whitePlayer._id ? 'white' : 'black'}
             isPlayersTurn={(isPlayersTurn || false) && connectionStatus === 'connected'}
             onMove={handleMove}
+            moveStatus={moveStatus}
           />
         </div>
 

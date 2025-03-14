@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Chessboard as ReactChessboard } from 'react-chessboard';
 import styled from 'styled-components';
-import { Move, Square } from 'chess.js';
+import { Move, Square, Chess } from 'chess.js';
 
 // Default starting position in FEN notation
 const DEFAULT_POSITION = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -31,11 +31,33 @@ const LoadingOverlay = styled.div`
   font-weight: bold;
 `;
 
+const MoveStatusIndicator = styled.div<{ status: 'idle' | 'pending' | 'success' | 'error' }>`
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  z-index: 5;
+  transition: all 0.3s ease;
+  background-color: ${props => {
+    switch (props.status) {
+      case 'pending': return '#f0ad4e'; // Yellow
+      case 'success': return '#5cb85c'; // Green
+      case 'error': return '#d9534f';   // Red
+      default: return 'transparent';    // Hidden when idle
+    }
+  }};
+  opacity: ${props => props.status === 'idle' ? 0 : 1};
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+`;
+
 interface ChessboardProps {
   position: string; // FEN string
   orientation: 'white' | 'black';
   isPlayersTurn: boolean;
   onMove: (move: Partial<Move>) => void;
+  moveStatus?: 'idle' | 'pending' | 'success' | 'error';
 }
 
 // Function to validate FEN string
@@ -56,20 +78,28 @@ const Chessboard: React.FC<ChessboardProps> = ({
   position,
   orientation,
   isPlayersTurn,
-  onMove
+  onMove,
+  moveStatus = 'idle'
 }) => {
-  // Keep position in state to avoid unnecessary re-renders
-  const [boardPosition, setBoardPosition] = useState<string>(DEFAULT_POSITION);
+  // Keep local position state for immediate updates
+  const [localPosition, setLocalPosition] = useState<string>(DEFAULT_POSITION);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastMove, setLastMove] = useState<{ from: Square; to: Square } | null>(null);
   
-  // Update position when props change
+  // Update local position when server position changes
   useEffect(() => {
     try {
       // Validate the position before setting it
       if (position && isValidFen(position)) {
-        setBoardPosition(position);
-        setError(null);
+        // Only update if server position is different and not during a pending move
+        if (position !== localPosition && moveStatus !== 'pending') {
+          setLocalPosition(position);
+          setError(null);
+        } else if (moveStatus === 'error') {
+          // If there was an error, revert to server position
+          setLocalPosition(position);
+        }
       } else if (position && !isValidFen(position)) {
         console.error('Invalid FEN position:', position);
         setError('Invalid board position');
@@ -80,7 +110,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
       console.error('Error setting board position:', err);
       setError('Error setting board position');
     }
-  }, [position]);
+  }, [position, moveStatus, localPosition]);
   
   // Memoize the onPieceDrop function to prevent unnecessary re-renders
   const onPieceDrop = useCallback((sourceSquare: Square, targetSquare: Square, piece: string) => {
@@ -97,6 +127,25 @@ const Chessboard: React.FC<ChessboardProps> = ({
       // For now, always promote to queen
       const promotion = isPawnPromotion ? 'q' : undefined;
       
+      // Update local position immediately
+      setLocalPosition(prevPosition => {
+        try {
+          const chess = new Chess(prevPosition);
+          chess.move({ 
+            from: sourceSquare, 
+            to: targetSquare,
+            promotion
+          });
+          return chess.fen();
+        } catch (err) {
+          console.error('Error updating local position:', err);
+          return prevPosition;
+        }
+      });
+      
+      // Store the last move for highlighting
+      setLastMove({ from: sourceSquare, to: targetSquare });
+      
       // Call the onMove callback
       onMove({
         from: sourceSquare,
@@ -112,6 +161,22 @@ const Chessboard: React.FC<ChessboardProps> = ({
     }
   }, [isPlayersTurn, onMove, error]);
 
+  // Get custom square styles for highlighting the last move
+  const getSquareStyles = useCallback(() => {
+    if (!lastMove) return {};
+    
+    const highlightColor = 
+      moveStatus === 'error' ? 'rgba(217, 83, 79, 0.4)' :
+      moveStatus === 'pending' ? 'rgba(240, 173, 78, 0.4)' :
+      moveStatus === 'success' ? 'rgba(92, 184, 92, 0.4)' :
+      'rgba(100, 100, 255, 0.4)';
+    
+    return {
+      [lastMove.from]: { backgroundColor: highlightColor },
+      [lastMove.to]: { backgroundColor: highlightColor }
+    };
+  }, [lastMove, moveStatus]);
+
   return (
     <BoardContainer>
       {isLoading && (
@@ -120,9 +185,10 @@ const Chessboard: React.FC<ChessboardProps> = ({
       {error && (
         <LoadingOverlay>Error: {error}</LoadingOverlay>
       )}
+      <MoveStatusIndicator status={moveStatus} />
       <ReactChessboard
         id="chess-board"
-        position={boardPosition}
+        position={localPosition} // Use local position instead of prop
         onPieceDrop={onPieceDrop}
         boardOrientation={orientation}
         showBoardNotation={true}
@@ -132,10 +198,12 @@ const Chessboard: React.FC<ChessboardProps> = ({
         }}
         customDarkSquareStyle={{ backgroundColor: '#769656' }}
         customLightSquareStyle={{ backgroundColor: '#eeeed2' }}
+        customSquareStyles={getSquareStyles()}
         isDraggablePiece={({ piece }) => isPlayersTurn && !error && 
           ((orientation === 'white' && piece[0] === 'w') || 
            (orientation === 'black' && piece[0] === 'b'))}
-        animationDuration={200}
+        animationDuration={150} // Faster animation for more responsive feel
+        transitionDuration={150} // Smoother transitions
       />
     </BoardContainer>
   );
