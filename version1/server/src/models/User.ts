@@ -1,0 +1,89 @@
+import mongoose, { Document, Model, Schema } from 'mongoose';
+import bcrypt from 'bcryptjs';
+
+// Define interfaces
+interface IUser extends Document {
+  username: string;
+  email: string;
+  password: string;
+  rating: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  comparePassword(candidatePassword: string): Promise<boolean>;
+}
+
+interface IUserModel extends Model<IUser> {
+  findByEmail(email: string): Promise<IUser | null>;
+}
+
+const userSchema = new Schema<IUser>(
+  {
+    username: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      minlength: 3,
+      maxlength: 20
+    },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true
+    },
+    password: {
+      type: String,
+      required: true,
+      minlength: 6
+    },
+    rating: {
+      type: Number,
+      default: 1200
+    },
+    wins: {
+      type: Number,
+      default: 0
+    },
+    losses: {
+      type: Number,
+      default: 0
+    },
+    draws: {
+      type: Number,
+      default: 0
+    }
+  },
+  {
+    timestamps: true
+  }
+);
+
+// Hash password before saving
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error: any) {
+    next(error);
+  }
+});
+
+// Compare password method
+userSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
+  return bcrypt.compare(candidatePassword, this.password);
+};
+
+// Static method to find user by email
+userSchema.statics.findByEmail = function (email: string) {
+  return this.findOne({ email });
+};
+
+const User = mongoose.model<IUser, IUserModel>('User', userSchema);
+
+export { IUser, User };

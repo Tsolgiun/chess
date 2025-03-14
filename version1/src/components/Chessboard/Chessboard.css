@@ -1,0 +1,143 @@
+.chessboard {
+  position: relative;
+  width: 600px;
+  height: 600px;
+  border: 2px solid #333;
+  display: grid;
+  grid-template-areas: 
+    ". files"
+    "ranks board";
+  grid-template-columns: 24px 1fr;
+  grid-template-rows: 24px 1fr;
+}
+
+.board-squares {
+  grid-area: board;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  background: #e5e5e5;
+}
+
+.square {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.square.light {
+  background-color: #f0d9b5;
+}
+
+.square.dark {
+  background-color: #b58863;
+}
+
+.piece {
+  width: 90%;
+  height: 90%;
+  cursor: grab;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Piece images */
+.piece.white.p { background-image: url('/pieces/wp.svg'); }
+.piece.white.r { background-image: url('/pieces/wr.svg'); }
+.piece.white.n { background-image: url('/pieces/wn.svg'); }
+.piece.white.b { background-image: url('/pieces/wb.svg'); }
+.piece.white.q { background-image: url('/pieces/wq.svg'); }
+.piece.white.k { background-image: url('/pieces/wk.svg'); }
+
+.piece.black.p { background-image: url('/pieces/bp.svg'); }
+.piece.black.r { background-image: url('/pieces/br.svg'); }
+.piece.black.n { background-image: url('/pieces/bn.svg'); }
+.piece.black.b { background-image: url('/pieces/bb.svg'); }
+.piece.black.q { background-image: url('/pieces/bq.svg'); }
+.piece.black.k { background-image: url('/pieces/bk.svg'); }
+
+/* Board labels */
+.rank-labels {
+  grid-area: ranks;
+  display: grid;
+  grid-template-rows: repeat(8, 1fr);
+  align-items: center;
+}
+
+.file-labels {
+  grid-area: files;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  align-items: center;
+}
+
+.label {
+  font-size: 14px;
+  color: #666;
+  text-align: center;
+  font-family: sans-serif;
+}
+
+/* Orientation specific styles */
+.chessboard.black .board-squares {
+  transform: rotate(180deg);
+}
+
+.chessboard.black .piece {
+  transform: rotate(180deg);
+}
+
+.chessboard.black .rank-labels {
+  transform: rotate(180deg);
+}
+
+.chessboard.black .file-labels {
+  transform: rotate(180deg);
+}
+
+/* Drag and drop styles */
+.square.valid-move {
+  background-color: rgba(0, 255, 0, 0.2);
+}
+
+.square.selected {
+  background-color: rgba(255, 255, 0, 0.3);
+}
+
+.piece.dragging {
+  opacity: 0.5;
+}
+
+/* Promotion dialog */
+.promotion-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.promotion-piece {
+  width: 60px;
+  height: 60px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  padding: 4px;
+}
+
+.promotion-piece:hover {
+  border-color: #2196f3;
+  background-color: #e3f2fd;
+}

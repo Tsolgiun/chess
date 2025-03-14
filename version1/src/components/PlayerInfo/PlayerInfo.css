@@ -1,0 +1,48 @@
+.player-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.player-info.active {
+  background-color: #e3f2fd;
+  box-shadow: 0 0 0 2px #2196f3;
+}
+
+.player-details {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.username {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.rating {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.time-info {
+  font-family: monospace;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.player-info.white {
+  border-left: 4px solid #fff;
+}
+
+.player-info.black {
+  border-left: 4px solid #000;
+}
+
+.player-info.active .time-info {
+  color: #2196f3;
+}

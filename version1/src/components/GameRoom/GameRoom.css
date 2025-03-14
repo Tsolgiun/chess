@@ -1,0 +1,248 @@
+.game-room {
+  display: flex;
+  justify-content: center;
+  padding: 2rem;
+  min-height: calc(100vh - 64px); /* Subtract navbar height */
+  background-color: #f5f5f5;
+  flex-direction: column;
+  align-items: center;
+}
+
+.game-room.error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.error-message {
+  font-size: 1.2rem;
+  color: #d32f2f;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background-color: #ffebee;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.retry-button {
+  padding: 0.5rem 1.5rem;
+  background-color: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.retry-button:hover {
+  background-color: #1976d2;
+}
+
+.game-room.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+.loading-text {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #666;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.game-container {
+  display: grid;
+  grid-template-areas:
+    "info info sidebar"
+    "board board sidebar";
+  grid-template-columns: auto auto 300px;
+  grid-template-rows: auto 1fr;
+  gap: 1rem;
+  max-width: 1200px;
+  width: 100%;
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.game-container.loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.7);
+  z-index: 5;
+}
+
+.connection-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #666;
+  text-align: center;
+  padding: 2rem;
+}
+
+.game-info {
+  grid-area: info;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.game-board {
+  grid-area: board;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.game-sidebar {
+  grid-area: sidebar;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border-left: 1px solid #e0e0e0;
+  padding-left: 1rem;
+}
+
+.debug-info {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.8rem;
+  max-width: 1200px;
+  width: 100%;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 1024px) {
+  .game-container {
+    grid-template-areas:
+      "info"
+      "board"
+      "sidebar";
+    grid-template-columns: 1fr;
+    padding: 1rem;
+  }
+
+  .game-sidebar {
+    border-left: none;
+    border-top: 1px solid #e0e0e0;
+    padding-left: 0;
+    padding-top: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .game-room {
+    padding: 1rem;
+  }
+
+  .game-container {
+    padding: 0.5rem;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .game-room {
+    background-color: #1a1a1a;
+  }
+
+  .game-container {
+    background: #2d2d2d;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .game-container.loading::after {
+    background-color: rgba(45, 45, 45, 0.7);
+  }
+
+  .connection-overlay {
+    background-color: rgba(45, 45, 45, 0.8);
+    color: #ccc;
+  }
+
+  .error-message {
+    background-color: #311b1b;
+    color: #f48fb1;
+  }
+
+  .retry-button {
+    background-color: #1976d2;
+  }
+
+  .retry-button:hover {
+    background-color: #2196f3;
+  }
+
+  .game-sidebar {
+    border-color: #404040;
+  }
+
+  .loading-overlay {
+    background-color: rgba(45, 45, 45, 0.8);
+  }
+
+  .loading-spinner {
+    border: 5px solid #333;
+    border-top: 5px solid #3498db;
+  }
+
+  .loading-text {
+    color: #ccc;
+  }
+
+  .debug-info {
+    background-color: #333;
+    color: #ccc;
+  }
+}
