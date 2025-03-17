@@ -209,7 +209,7 @@ const Board = () => {
     const renderSquare = (file, rank) => {
         const square = file + rank;
         const piece = game.get(square);
-        const isLight = (FILES.indexOf(file) + RANKS.indexOf(rank)) % 2 === 0;
+        const isLight = (FILES.indexOf(file) + RANKS.indexOf(rank)) % 2 !== 0;
         const pieceImage = getPieceImage(piece);
         const isClickable = isSquareClickable(piece);
         

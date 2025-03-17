@@ -1,32 +1,20 @@
 import React from 'react';
-import styled from 'styled-components';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { GameProvider } from './context/GameContext';
-import Board from './components/Board/Board';
-import GameSetup from './components/GameSetup/GameSetup';
-import GameInfo from './components/GameInfo/GameInfo';
-
-const Container = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-`;
-
-const Title = styled.h1`
-  text-align: center;
-  color: #2c3e50;
-  margin-bottom: 30px;
-`;
+import Home from './pages/Home';
+import Game from './pages/Game';
 
 function App() {
   return (
-    <GameProvider>
-      <Container>
-        <Title>Online Chess</Title>
-        <GameSetup />
-        <GameInfo />
-        <Board />
-      </Container>
-    </GameProvider>
+    <BrowserRouter>
+      <GameProvider>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/game/:gameId" element={<Game />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </GameProvider>
+    </BrowserRouter>
   );
 }
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useGame } from '../../context/GameContext';
 
@@ -66,13 +67,21 @@ const GameId = styled.div`
 `;
 
 const GameSetup = () => {
+    const navigate = useNavigate();
     const { createGame, joinGame, gameId, status, isGameActive } = useGame();
     const [joinGameId, setJoinGameId] = useState('');
+
+    // Navigate to game when gameId is set
+    React.useEffect(() => {
+        if (gameId && isGameActive) {
+            navigate(`/game/${gameId}`);
+        }
+    }, [gameId, isGameActive, navigate]);
 
     const handleJoinGame = (e) => {
         e.preventDefault();
         if (joinGameId) {
-            joinGame(joinGameId);
+            navigate(`/game/${joinGameId.toUpperCase()}`);
         }
     };
 

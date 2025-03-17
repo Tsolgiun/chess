@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { Chess } from 'chess.js';
 import io from 'socket.io-client';
 
@@ -93,21 +93,35 @@ export const GameProvider = ({ children }) => {
         };
     }, [socket, game]);
 
-    const createGame = () => {
+    // Reset all game state
+    const resetGameState = useCallback(() => {
+        game.reset();
+        setGameId(null);
+        setPlayerColor(null);
+        setIsGameActive(false);
+        setBoardFlipped(false);
+        setGameOver(false);
+        setGameResult(null);
+        setStatus('Welcome to Online Chess!');
+    }, [game]);
+
+    const createGame = useCallback(() => {
         if (socket) {
+            resetGameState();
             socket.emit('createGame');
             setStatus('Creating a new game...');
         }
-    };
+    }, [socket, resetGameState]);
 
-    const joinGame = (id) => {
+    const joinGame = useCallback((id) => {
         if (socket && id) {
+            resetGameState();
             socket.emit('joinGame', { gameId: id.trim().toUpperCase() });
             setStatus('Joining game...');
         }
-    };
+    }, [socket, resetGameState]);
 
-    const makeMove = (move) => {
+    const makeMove = useCallback((move) => {
         if (!socket || !isGameActive || gameOver) return false;
         
         try {
@@ -121,7 +135,7 @@ export const GameProvider = ({ children }) => {
             console.error('Invalid move:', error);
         }
         return false;
-    };
+    }, [socket, isGameActive, gameOver, game]);
 
     const updateStatus = (currentGame) => {
         let statusText = '';
@@ -150,18 +164,6 @@ export const GameProvider = ({ children }) => {
         setStatus(statusText);
     };
 
-    const resetGame = () => {
-        const newGame = new Chess();
-        setGame(newGame);
-        setGameId(null);
-        setPlayerColor(null);
-        setIsGameActive(false);
-        setBoardFlipped(false);
-        setStatus('Welcome to Online Chess!');
-        setGameOver(false);
-        setGameResult(null);
-    };
-
     const value = {
         socket,
         game,
@@ -175,7 +177,7 @@ export const GameProvider = ({ children }) => {
         createGame,
         joinGame,
         makeMove,
-        resetGame,
+        resetGameState,
         setBoardFlipped
     };
 
