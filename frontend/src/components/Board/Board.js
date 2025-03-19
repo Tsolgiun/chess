@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import { useGame } from '../../context/GameContext';
 
 const BoardWrapper = styled.div`
     width: min(80vw, 600px);
     margin: 0 auto;
     position: relative;
+    background: #2c3e50;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
 `;
 
 const BoardContainer = styled.div`
@@ -14,42 +18,48 @@ const BoardContainer = styled.div`
     grid-template-rows: 1fr auto;
     gap: 0;
     aspect-ratio: 1.1;
+    background: #fff;
+    padding: 10px;
+    border-radius: 4px;
 `;
 
 const BoardGrid = styled.div`
     display: grid;
     grid-template-columns: repeat(8, 1fr);
-    border: 1px solid #2c3e50;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: 2px solid #2c3e50;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     aspect-ratio: 1;
     position: relative;
+    border-radius: 4px;
+    overflow: hidden;
 `;
 
 const RankLabels = styled.div`
     display: grid;
     grid-template-rows: repeat(8, 1fr);
-    padding-right: 12px;
-    font-weight: bold;
-    color: #2c3e50;
-    width: 20px;
+    padding-right: 15px;
+    font-weight: 600;
+    color: #fff;
+    width: 24px;
 `;
 
 const FileLabels = styled.div`
     display: grid;
     grid-template-columns: repeat(8, 1fr);
-    padding-top: 12px;
-    font-weight: bold;
-    color: #2c3e50;
+    padding-top: 15px;
+    font-weight: 600;
+    color: #fff;
     text-align: center;
-    height: 20px;
+    height: 24px;
 `;
 
 const Label = styled.div`
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: min(2.5vw, 16px);
+    font-size: min(2.5vw, 14px);
     user-select: none;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 `;
 
 const Square = styled.div`
@@ -57,24 +67,47 @@ const Square = styled.div`
     position: relative;
     background-color: ${props => (props.isLight ? '#f0d9b5' : '#b58863')};
     cursor: ${props => props.isClickable ? 'pointer' : 'default'};
+    transition: transform 0.15s ease;
+    
+    &:hover {
+        transform: ${props => props.isClickable ? 'scale(1.02)' : 'none'};
+    }
     
     ${props => props.isSelected && `
-        box-shadow: inset 0 0 0 4px #646f40;
+        &::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(106, 159, 181, 0.4);
+            z-index: 1;
+        }
     `}
 
     ${props => props.isValidMove && `
         &::after {
             content: '';
             position: absolute;
-            width: 25%;
-            height: 25%;
+            width: 30%;
+            height: 30%;
             border-radius: 50%;
-            background-color: rgba(0, 0, 0, 0.2);
+            background-color: rgba(106, 159, 181, 0.6);
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
+            z-index: 1;
         }
     `}
+`;
+
+const moveAnimation = keyframes`
+    from {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
 `;
 
 const Piece = styled.div`
@@ -89,6 +122,8 @@ const Piece = styled.div`
     background-repeat: no-repeat;
     z-index: 2;
     pointer-events: none;
+    animation: ${moveAnimation} 0.3s ease;
+    filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.2));
 `;
 
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
