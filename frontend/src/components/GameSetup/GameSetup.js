@@ -52,6 +52,7 @@ const Button = styled.button`
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    min-width: 180px;
 
     &:hover {
         transform: translateY(-2px);
@@ -140,10 +141,18 @@ const OrDivider = styled.div`
     }
 `;
 
+const ButtonGroup = styled.div`
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+`;
+
 const GameSetup = () => {
     const navigate = useNavigate();
-    const { createGame, joinGame, gameId, status, isGameActive } = useGame();
+    const { createGame, joinGame, startAIGame, gameId, status, isGameActive } = useGame();
     const [joinGameId, setJoinGameId] = useState('');
+    const [showAIOptions, setShowAIOptions] = useState(false);
 
     useEffect(() => {
         if (gameId && isGameActive) {
@@ -156,6 +165,11 @@ const GameSetup = () => {
         if (joinGameId) {
             navigate(`/game/${joinGameId.toUpperCase()}`);
         }
+    };
+
+    const handleAIGame = (color) => {
+        startAIGame(color);
+        navigate('/game/ai');
     };
 
     if (isGameActive) {
@@ -173,32 +187,70 @@ const GameSetup = () => {
         <Container>
             <Section>
                 <Status>{status}</Status>
-                <Button 
-                    onClick={createGame} 
-                    variant="primary" 
-                    size="large"
-                >
-                    Create New Game
-                </Button>
                 
-                <OrDivider>OR</OrDivider>
-                
-                <FormWrapper onSubmit={handleJoinGame}>
-                    <Input
-                        type="text"
-                        placeholder="Enter Game ID to Join"
-                        value={joinGameId}
-                        onChange={(e) => setJoinGameId(e.target.value.toUpperCase())}
-                        maxLength={6}
-                    />
+                <ButtonGroup>
                     <Button 
-                        type="submit" 
-                        disabled={!joinGameId}
-                        variant="primary"
+                        onClick={() => setShowAIOptions(false)}
+                        variant={!showAIOptions ? "primary" : "secondary"}
+                        size="large"
                     >
-                        Join Game
+                        Play Online
                     </Button>
-                </FormWrapper>
+                    
+                    <Button 
+                        onClick={() => setShowAIOptions(true)}
+                        variant={showAIOptions ? "primary" : "secondary"}
+                        size="large"
+                    >
+                        Play vs AI
+                    </Button>
+                </ButtonGroup>
+
+                {showAIOptions ? (
+                    <ButtonGroup>
+                        <Button
+                            onClick={() => handleAIGame('white')}
+                            variant="primary"
+                        >
+                            Play as White
+                        </Button>
+                        <Button
+                            onClick={() => handleAIGame('black')}
+                            variant="primary"
+                        >
+                            Play as Black
+                        </Button>
+                    </ButtonGroup>
+                ) : (
+                    <>
+                        <Button 
+                            onClick={createGame} 
+                            variant="primary" 
+                            size="large"
+                        >
+                            Create New Game
+                        </Button>
+                        
+                        <OrDivider>OR</OrDivider>
+                        
+                        <FormWrapper onSubmit={handleJoinGame}>
+                            <Input
+                                type="text"
+                                placeholder="Enter Game ID to Join"
+                                value={joinGameId}
+                                onChange={(e) => setJoinGameId(e.target.value.toUpperCase())}
+                                maxLength={6}
+                            />
+                            <Button 
+                                type="submit" 
+                                disabled={!joinGameId}
+                                variant="primary"
+                            >
+                                Join Game
+                            </Button>
+                        </FormWrapper>
+                    </>
+                )}
             </Section>
         </Container>
     );

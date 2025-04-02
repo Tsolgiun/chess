@@ -1,26 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useGame } from '../../context/GameContext';
 
 const BoardWrapper = styled.div`
-    width: min(80vw, 600px);
+    width: min(80vw, 640px);
     margin: 0 auto;
     position: relative;
     background: #2c3e50;
-    padding: 15px;
+    padding: 20px;
     border-radius: 8px;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-`;
-
-const BoardContainer = styled.div`
-    display: grid;
-    grid-template-columns: auto 1fr;
-    grid-template-rows: 1fr auto;
-    gap: 0;
-    aspect-ratio: 1.1;
-    background: #fff;
-    padding: 10px;
-    border-radius: 4px;
+    ${props => props.isDisabled && `
+        pointer-events: none;
+        opacity: 0.8;
+    `}
 `;
 
 const BoardGrid = styled.div`
@@ -32,34 +25,6 @@ const BoardGrid = styled.div`
     position: relative;
     border-radius: 4px;
     overflow: hidden;
-`;
-
-const RankLabels = styled.div`
-    display: grid;
-    grid-template-rows: repeat(8, 1fr);
-    padding-right: 15px;
-    font-weight: 600;
-    color: #fff;
-    width: 24px;
-`;
-
-const FileLabels = styled.div`
-    display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    padding-top: 15px;
-    font-weight: 600;
-    color: #fff;
-    text-align: center;
-    height: 24px;
-`;
-
-const Label = styled.div`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: min(2.5vw, 14px);
-    user-select: none;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 `;
 
 const Square = styled.div`
@@ -97,6 +62,36 @@ const Square = styled.div`
             z-index: 1;
         }
     `}
+
+    ${props => props.isLastMove && `
+        box-shadow: inset 0 0 0 3px rgba(155, 199, 0, 0.6);
+    `}
+`;
+
+const Coordinate = styled.div`
+    position: absolute;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px;
+    z-index: 1;
+    user-select: none;
+    opacity: 0.8;
+    color: ${props => props.isLight ? '#b58863' : '#f0d9b5'};
+    
+    ${props => props.position === 'bottom-left' && `
+        bottom: 2px;
+        left: 2px;
+    `}
+    
+    ${props => props.position === 'bottom-right' && `
+        bottom: 2px;
+        right: 2px;
+    `}
+    
+    ${props => props.position === 'top-left' && `
+        top: 2px;
+        left: 2px;
+    `}
 `;
 
 const moveAnimation = keyframes`
@@ -126,25 +121,43 @@ const Piece = styled.div`
     filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.2));
 `;
 
+const AIThinkingIndicator = styled.div`
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 4px;
+    z-index: 3;
+`;
+
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 const RANKS = ['1', '2', '3', '4', '5', '6', '7', '8'];
 
 const Board = () => {
-    const { game, playerColor, makeMove, boardFlipped, isGameActive } = useGame();
+    const { 
+        game, 
+        playerColor, 
+        makeMove, 
+        boardFlipped, 
+        isGameActive,
+        isAIGame,
+        isAIThinking,
+        lastMove
+    } = useGame();
     
-    // Set up initial position if the game is empty and not active
-    React.useEffect(() => {
+    const [selectedSquare, setSelectedSquare] = useState(null);
+    const [validMoves, setValidMoves] = useState([]);
+
+    useEffect(() => {
         if (!isGameActive) {
             game.reset();
-            console.log('Board reset:', {
-                fen: game.fen(),
-                board: game.board(),
-                pieces: game.board().flat().filter(Boolean)
-            });
         }
     }, [game, isGameActive]);
 
-    React.useEffect(() => {
+    useEffect(() => {
         // Preload images
         const preloadImages = () => {
             const pieces = ['pawn', 'rook', 'knight', 'bishop', 'queen', 'king'];
@@ -153,36 +166,14 @@ const Board = () => {
             colors.forEach(color => {
                 pieces.forEach(piece => {
                     const img = new Image();
-                    const src = `/pieces/${color}-${piece}.png`;
-                    img.src = src;
-                    img.onload = () => console.log(`Successfully loaded: ${src}`);
-                    img.onerror = (e) => console.error(`Failed to load: ${src}`, e);
+                    img.src = `/pieces/${color}-${piece}.png`;
+                    img.onerror = (e) => console.error(`Failed to load piece image:`, e);
                 });
             });
         };
         
         preloadImages();
     }, []);
-
-    // Debug logs
-    React.useEffect(() => {
-        const boardState = game.board();
-        console.log('Current board state:', {
-            fen: game.fen(),
-            board: boardState,
-            pieces: boardState.flat().filter(Boolean).map(p => ({
-                type: p.type,
-                color: p.color,
-                image: getPieceImage(p)
-            })),
-            isGameActive,
-            playerColor,
-            boardFlipped
-        });
-    }, [game, isGameActive, playerColor, boardFlipped]);
-
-    const [selectedSquare, setSelectedSquare] = useState(null);
-    const [validMoves, setValidMoves] = useState([]);
 
     const getPieceImage = (piece) => {
         if (!piece) return null;
@@ -196,13 +187,12 @@ const Board = () => {
             'k': 'king'
         };
         const pieceType = pieceTypeMap[piece.type.toLowerCase()];
-        const imagePath = `/pieces/${color}-${pieceType}.png`;
-        console.log('Getting piece image:', { piece, imagePath });
-        return imagePath;
+        return `/pieces/${color}-${pieceType}.png`;
     };
 
     const isSquareClickable = (piece) => {
         if (!isGameActive) return false;
+        if (isAIThinking) return false;
         if (!piece) return validMoves.length > 0;
         return piece.color === (playerColor === 'white' ? 'w' : 'b');
     };
@@ -241,60 +231,66 @@ const Board = () => {
         }
     };
 
-    const renderSquare = (file, rank) => {
-        const square = file + rank;
-        const piece = game.get(square);
-        const isLight = (FILES.indexOf(file) + RANKS.indexOf(rank)) % 2 !== 0;
-        const pieceImage = getPieceImage(piece);
-        const isClickable = isSquareClickable(piece);
-        
-        // Debug log for piece image path
-        if (piece) {
-            console.log(`Square ${square}:`, {
-                piece,
-                pieceImage,
-                color: piece.color === 'w' ? 'white' : 'black',
-                type: piece.type.toLowerCase()
-            });
-        }
-
-        return (
-            <Square
-                key={square}
-                isLight={isLight}
-                isSelected={selectedSquare === square}
-                isValidMove={validMoves.includes(square)}
-                isClickable={isClickable}
-                onClick={() => handleSquareClick(square)}
-            >
-                {pieceImage && <Piece image={pieceImage} />}
-            </Square>
-        );
-    };
-
-    const boardFiles = boardFlipped ? FILES : [...FILES].reverse();
-    const boardRanks = boardFlipped ? [...RANKS].reverse() : RANKS;
+    // Determine board orientation
+    const boardFiles = boardFlipped ? [...FILES].reverse() : FILES;
+    const boardRanks = boardFlipped ? RANKS : [...RANKS].reverse();
 
     return (
-        <BoardWrapper>
-            <BoardContainer>
-                <RankLabels>
-                    {boardRanks.map(rank => (
-                        <Label key={rank}>{rank}</Label>
-                    ))}
-                </RankLabels>
-                <BoardGrid>
-                    {boardRanks.map(rank =>
-                        boardFiles.map(file => renderSquare(file, rank))
-                    )}
-                </BoardGrid>
-                <div /> {/* Empty div for grid alignment */}
-                <FileLabels>
-                    {boardFiles.map(file => (
-                        <Label key={file}>{file}</Label>
-                    ))}
-                </FileLabels>
-            </BoardContainer>
+        <BoardWrapper isDisabled={isAIThinking}>
+            {isAIThinking && (
+                <AIThinkingIndicator>
+                    AI is thinking...
+                </AIThinkingIndicator>
+            )}
+            <BoardGrid>
+                {boardRanks.map(rank =>
+                    boardFiles.map(file => {
+                        const square = file + rank;
+                        const piece = game.get(square);
+                        const fileIndex = FILES.indexOf(file);
+                        const rankIndex = RANKS.indexOf(rank);
+                        const isLight = (fileIndex + rankIndex) % 2 === (playerColor === 'white' ? 0 : 1);
+                        const pieceImage = getPieceImage(piece);
+                        const isClickable = isSquareClickable(piece);
+                        const isLastMoveSquare = lastMove && 
+                            (square === lastMove.from || square === lastMove.to);
+
+                        return (
+                            <Square
+                                key={square}
+                                isLight={isLight}
+                                isSelected={selectedSquare === square}
+                                isValidMove={validMoves.includes(square)}
+                                isClickable={isClickable}
+                                isLastMove={isLastMoveSquare}
+                                onClick={() => handleSquareClick(square)}
+                            >
+                                {/* Show file coordinates on the bottom rank */}
+                                {(playerColor === 'white' ? rank === '1' : rank === '8') && (
+                                    <Coordinate 
+                                        isLight={isLight}
+                                        position="bottom-left"
+                                    >
+                                        {file}
+                                    </Coordinate>
+                                )}
+                                
+                                {/* Show rank coordinates on the leftmost file */}
+                                {(playerColor === 'white' ? file === 'a' : file === 'h') && (
+                                    <Coordinate 
+                                        isLight={isLight}
+                                        position="top-left"
+                                    >
+                                        {rank}
+                                    </Coordinate>
+                                )}
+                                
+                                {pieceImage && <Piece image={pieceImage} />}
+                            </Square>
+                        );
+                    })
+                )}
+            </BoardGrid>
         </BoardWrapper>
     );
 };

@@ -5,18 +5,56 @@ const socketIo = require('socket.io');
 const { Chess } = require('chess.js');
 const connectDB = require('./config/database');
 const Game = require('./models/Game');
+const stockfishController = require('./controllers/StockfishController');
 
-// Connect to MongoDB
-connectDB();
+async function startServer() {
+    try {
+        // Initialize Stockfish engine
+        console.log('Initializing Stockfish...');
+        await stockfishController.initialize();
+        console.log('Stockfish initialized successfully');
 
-// Initialize Express and Socket.io
-const app = express();
+        // Connect to MongoDB
+        await connectDB();
+
+        // Initialize Express and Socket.io
+        const app = express();
+app.use(express.json());  // Add JSON body parser
 const server = http.createServer(app);
 const io = socketIo(server, {
     cors: {
         origin: "http://localhost:3000",
         methods: ["GET", "POST"]
     }
+});
+
+// Test endpoint for Stockfish
+app.post('/api/test-stockfish', async (req, res) => {
+    const { fen } = req.body;
+    
+    if (!fen) {
+        return res.status(400).json({ error: 'FEN string is required' });
+    }
+
+    try {
+        if (!stockfishController.isReady) {
+            throw new Error('Stockfish engine not ready');
+        }
+        
+        const move = await stockfishController.getMove(fen);
+        res.json({ move });
+    } catch (error) {
+        console.error('Stockfish error:', error);
+        res.status(500).json({ error: 'Failed to calculate move: ' + error.message });
+    }
+});
+
+// Enable CORS
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    next();
 });
 
 // In-memory cache for active games
@@ -233,7 +271,29 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Handle disconnect
+    // Handle AI move requests
+    socket.on('requestAIMove', async (data) => {
+        console.log('Received AI move request with FEN:', data.fen);
+        try {
+            if (!stockfishController.isReady) {
+                throw new Error('Stockfish engine not ready');
+            }
+            
+            const move = await stockfishController.getMove(data.fen);
+            console.log('Stockfish calculated move:', move);
+            socket.emit('aiMoveCalculated', { move });
+            console.log('Emitted aiMoveCalculated event with move:', move);
+        } catch (error) {
+            console.error('AI move calculation error:', error);
+            socket.emit('error', { message: 'AI move calculation failed: ' + error.message });
+        }
+    });
+
+    // Handle stop engine requests
+    socket.on('stopEngine', () => {
+        stockfishController.stop();
+    });
+
     socket.on('disconnect', async () => {
         const gameId = socket.data.gameId;
         
@@ -273,7 +333,26 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+        const PORT = process.env.PORT || 3001;
+        server.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+        
+    } catch (error) {
+        console.error('Failed to start server:', error);
+        process.exit(1);
+    }
+}
+
+startServer();
+
+// Cleanup on server shutdown
+process.on('SIGINT', () => {
+    stockfishController.quit();
+    process.exit();
+});
+
+process.on('SIGTERM', () => {
+    stockfishController.quit();
+    process.exit();
 });
