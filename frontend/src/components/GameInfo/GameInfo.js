@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import { useGame } from '../../context/GameContext';
 
@@ -108,6 +109,7 @@ const Button = styled.button`
 `;
 
 const GameInfo = () => {
+    const navigate = useNavigate();
     const {
         gameId,
         playerColor,
@@ -116,8 +118,20 @@ const GameInfo = () => {
         gameOver,
         boardFlipped,
         setBoardFlipped,
-        resetGame
+        resetGameState,
+        resignGame,
+        offerDraw,
+        acceptDraw,
+        declineDraw,
+        drawOffered,
+        drawOfferFrom,
+        isAIGame
     } = useGame();
+
+    const handleNewGame = () => {
+        resetGameState();
+        navigate('/');
+    };
 
     if (!isGameActive) {
         return null;
@@ -139,9 +153,39 @@ const GameInfo = () => {
                     Flip Board
                 </Button>
             </InfoRow>
+            {!gameOver && isGameActive && (
+                <InfoRow>
+                    <Label>Game Controls:</Label>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        {!drawOffered && !isAIGame && (
+                            <Button onClick={offerDraw}>
+                                Offer Draw
+                            </Button>
+                        )}
+                        {drawOffered && drawOfferFrom !== playerColor && (
+                            <>
+                                <Button onClick={acceptDraw}>
+                                    Accept Draw
+                                </Button>
+                                <Button onClick={declineDraw}>
+                                    Decline Draw
+                                </Button>
+                            </>
+                        )}
+                        <Button 
+                            onClick={resignGame}
+                            style={{ 
+                                background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)'
+                            }}
+                        >
+                            Resign
+                        </Button>
+                    </div>
+                </InfoRow>
+            )}
             {gameOver && (
                 <InfoRow>
-                    <Button onClick={resetGame}>New Game</Button>
+                    <Button onClick={handleNewGame}>New Game</Button>
                 </InfoRow>
             )}
             <Status isGameOver={gameOver}>{status}</Status>

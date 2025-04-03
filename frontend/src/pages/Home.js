@@ -1,68 +1,115 @@
 import React from 'react';
-import styled, { keyframes } from 'styled-components';
+import { Link } from 'react-router-dom';
+import styled from 'styled-components';
+import { motion } from 'framer-motion';
 import GameSetup from '../components/GameSetup/GameSetup';
+import Board from '../components/Board/Board';
+import { useGame } from '../context/GameContext';
 
-const fadeIn = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`;
-
-const Container = styled.div`
-  max-width: 1200px;
+const Container = styled(motion.div)`
+  max-width: 1400px;
   margin: 0 auto;
   padding: 40px 20px;
-  animation: ${fadeIn} 0.6s ease-out;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: 1fr;
+    max-width: 800px;
+  }
 `;
 
 const Header = styled.header`
   text-align: center;
-  margin-bottom: 50px;
+  margin-bottom: 40px;
+  grid-column: 1 / -1;
 `;
 
-const Title = styled.h1`
-  font-size: 3.5rem;
+const Title = styled(Link)`
+  font-size: 2rem;
   color: #2c3e50;
-  margin-bottom: 15px;
-  font-weight: 700;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
-  background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: #3498db;
+  }
 `;
 
-const Subtitle = styled.p`
-  font-size: 1.2rem;
-  color: #7f8c8d;
-  max-width: 600px;
-  margin: 0 auto;
-  line-height: 1.6;
-`;
-
-const ContentWrapper = styled.div`
+const BoardWrapper = styled(motion.div)`
+  position: relative;
   background: white;
   border-radius: 16px;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
   padding: 30px;
-  max-width: 800px;
-  margin: 0 auto;
+`;
+
+const BoardOverlay = styled(motion.div)`
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  backdrop-filter: blur(2px);
+  pointer-events: none;
+`;
+
+const OverlayText = styled.div`
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  padding: 20px 40px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 8px;
+`;
+
+const ContentWrapper = styled(motion.div)`
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  padding: 30px;
 `;
 
 const Home = () => {
+  const { isGameActive } = useGame();
+  
+  const containerVariants = {
+    initial: { opacity: 0 },
+    animate: { 
+      opacity: 1,
+      transition: { duration: 0.8 }
+    }
+  };
+
+  const overlayVariants = {
+    initial: { opacity: 0 },
+    animate: { 
+      opacity: 1,
+      transition: { duration: 0.3 }
+    }
+  };
+
   return (
-    <Container>
+    <Container
+      variants={containerVariants}
+      initial="initial"
+      animate="animate"
+    >
       <Header>
-        <Title>Online Chess</Title>
-        <Subtitle>
-          Play chess with friends in real-time. Create a new game or join an existing one 
-          to start playing immediately.
-        </Subtitle>
+        <Title to="/">chess.mn</Title>
       </Header>
+      <BoardWrapper>
+        <Board demoMode={!isGameActive} />
+        <BoardOverlay variants={overlayVariants}>
+          <OverlayText>Start a game to play</OverlayText>
+        </BoardOverlay>
+      </BoardWrapper>
       <ContentWrapper>
         <GameSetup />
       </ContentWrapper>

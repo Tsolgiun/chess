@@ -258,6 +258,84 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Handle resign
+    socket.on('resign', async () => {
+        const gameId = socket.data.gameId;
+        const playerColor = socket.data.color;
+        
+        if (!gameId || !games[gameId]) {
+            socket.emit('error', { message: 'Game not found' });
+            return;
+        }
+
+        try {
+            // Update game status in database
+            await Game.findOneAndUpdate(
+                { gameId },
+                { 
+                    $set: { 
+                        status: 'completed',
+                        winner: playerColor === 'white' ? 'black' : 'white'
+                    }
+                }
+            );
+
+            const result = `Game Over - ${playerColor === 'white' ? 'Black' : 'White'} wins by resignation`;
+            io.to(gameId).emit('gameOver', { result });
+        } catch (error) {
+            console.error('Resign error:', error);
+            socket.emit('error', { message: 'Failed to resign game' });
+        }
+    });
+
+    // Handle draw offer
+    socket.on('offerDraw', () => {
+        const gameId = socket.data.gameId;
+        const playerColor = socket.data.color;
+        
+        if (gameId) {
+            socket.to(gameId).emit('drawOffered', { from: playerColor });
+        }
+    });
+
+    // Handle draw acceptance
+    socket.on('acceptDraw', async () => {
+        const gameId = socket.data.gameId;
+        
+        if (!gameId || !games[gameId]) {
+            socket.emit('error', { message: 'Game not found' });
+            return;
+        }
+
+        try {
+            // Update game status in database
+            await Game.findOneAndUpdate(
+                { gameId },
+                { 
+                    $set: { 
+                        status: 'completed',
+                        winner: 'draw'
+                    }
+                }
+            );
+
+            io.to(gameId).emit('gameOver', { result: 'Game Over - Draw by agreement' });
+        } catch (error) {
+            console.error('Draw acceptance error:', error);
+            socket.emit('error', { message: 'Failed to process draw acceptance' });
+        }
+    });
+
+    // Handle draw decline
+    socket.on('declineDraw', () => {
+        const gameId = socket.data.gameId;
+        const playerColor = socket.data.color;
+        
+        if (gameId) {
+            socket.to(gameId).emit('drawDeclined', { from: playerColor });
+        }
+    });
+
     // Handle chat messages
     socket.on('sendMessage', (data) => {
         const gameId = socket.data.gameId;

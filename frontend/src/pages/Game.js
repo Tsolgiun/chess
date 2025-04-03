@@ -1,81 +1,57 @@
 import React, { useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import styled, { keyframes } from 'styled-components';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import styled from 'styled-components';
+import { motion } from 'framer-motion';
 import Board from '../components/Board/Board';
 import GameInfo from '../components/GameInfo/GameInfo';
 import { useGame } from '../context/GameContext';
 
-const fadeIn = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`;
-
-const Container = styled.div`
+const Container = styled(motion.div)`
   max-width: 1400px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 40px 20px;
   display: grid;
-  grid-template-columns: 300px 1fr 300px;
-  gap: 30px;
-  height: calc(100vh - 40px);
-  animation: ${fadeIn} 0.6s ease-out;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
 
   @media (max-width: 1200px) {
     grid-template-columns: 1fr;
-    height: auto;
+    max-width: 800px;
   }
 `;
 
 const Header = styled.header`
-  grid-column: 1 / -1;
-  background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-`;
-
-const Title = styled.h1`
   text-align: center;
-  color: white;
-  margin: 0;
-  font-size: 2.5rem;
-  font-weight: 700;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  margin-bottom: 40px;
+  grid-column: 1 / -1;
 `;
 
-const SidePanel = styled.div`
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+const Title = styled(Link)`
+  font-size: 2rem;
+  color: #2c3e50;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
 
-  @media (max-width: 1200px) {
-    order: ${props => props.isRight ? 3 : 1};
+  &:hover {
+    color: #3498db;
   }
 `;
 
-const BoardContainer = styled.div`
+const BoardWrapper = styled(motion.div)`
+  position: relative;
   background: white;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  border-radius: 16px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+`;
 
-  @media (max-width: 1200px) {
-    order: 2;
-  }
+const ContentWrapper = styled(motion.div)`
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  padding: 30px;
 `;
 
 const Game = () => {
@@ -90,28 +66,64 @@ const Game = () => {
   }, [gameId, joinGame, isGameActive]);
 
   useEffect(() => {
+    let navigationTimer;
     if (status.includes('Game not found') || status.includes('Failed to join')) {
-      setTimeout(() => {
-        navigate('/');
-      }, 3000);
+      navigationTimer = setTimeout(() => {
+        navigate('/', { replace: true });
+      }, 2000);
     }
+    return () => {
+      if (navigationTimer) clearTimeout(navigationTimer);
+    };
   }, [status, navigate]);
 
+  const containerVariants = {
+    initial: { opacity: 0 },
+    animate: { 
+      opacity: 1,
+      transition: { duration: 0.8 }
+    },
+    exit: {
+      opacity: 0,
+      transition: { duration: 0.5 }
+    }
+  };
+
+  if (status.includes('Game not found') || status.includes('Failed to join')) {
+    return (
+      <Container
+        variants={containerVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+      >
+        <Header>
+          <Title to="/">chess.mn</Title>
+        </Header>
+        <div style={{ textAlign: 'center', gridColumn: '1 / -1' }}>
+          {status}
+          <p>Redirecting to home page...</p>
+        </div>
+      </Container>
+    );
+  }
+
   return (
-    <Container>
+    <Container
+      variants={containerVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+    >
       <Header>
-        <Title>Online Chess</Title>
+        <Title to="/">chess.mn</Title>
       </Header>
-      <SidePanel>
-        <GameInfo />
-      </SidePanel>
-      <BoardContainer>
+      <BoardWrapper>
         <Board />
-      </BoardContainer>
-      <SidePanel isRight>
-        <h2>Move History</h2>
-        {/* Move history will be implemented later */}
-      </SidePanel>
+      </BoardWrapper>
+      <ContentWrapper>
+        <GameInfo />
+      </ContentWrapper>
     </Container>
   );
 };

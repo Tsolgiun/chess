@@ -19,6 +19,8 @@ export const GameProvider = ({ children }) => {
     const [isAIGame, setIsAIGame] = useState(false);
     const [isAIThinking, setIsAIThinking] = useState(false);
     const [lastMove, setLastMove] = useState(null);
+    const [drawOffered, setDrawOffered] = useState(false);
+    const [drawOfferFrom, setDrawOfferFrom] = useState(null);
 
     // Utility functions
     const updateStatus = useCallback((currentGame) => {
@@ -151,6 +153,8 @@ export const GameProvider = ({ children }) => {
         setIsAIGame(false);
         setIsAIThinking(false);
         setLastMove(null);
+        setDrawOffered(false);
+        setDrawOfferFrom(null);
         setStatus('Welcome to Online Chess!');
     }, []);
 
@@ -233,6 +237,18 @@ export const GameProvider = ({ children }) => {
             setStatus(result);
         });
 
+        socket.on('drawOffered', ({ from }) => {
+            setDrawOffered(true);
+            setDrawOfferFrom(from);
+            setStatus(`${from === 'white' ? 'White' : 'Black'} offers a draw`);
+        });
+
+        socket.on('drawDeclined', ({ from }) => {
+            setDrawOffered(false);
+            setDrawOfferFrom(null);
+            setStatus(`${from === 'white' ? 'White' : 'Black'} declined the draw offer`);
+        });
+
         socket.on('opponentDisconnected', () => {
             setStatus('Your opponent has disconnected.');
             setIsGameActive(false);
@@ -247,6 +263,8 @@ export const GameProvider = ({ children }) => {
                 socket.off('error');
                 socket.off('gameOver');
                 socket.off('opponentDisconnected');
+                socket.off('drawOffered');
+                socket.off('drawDeclined');
             }
         };
     }, [socket, updateStatus]);
@@ -281,7 +299,48 @@ export const GameProvider = ({ children }) => {
         startAIGame,
         makeMove,
         resetGameState,
-        setBoardFlipped
+        setBoardFlipped,
+        // Resign function
+        resignGame: useCallback(() => {
+            if (!isGameActive || gameOver) return;
+            
+            if (isAIGame) {
+                setGameOver(true);
+                setGameResult('Game Over - You resigned');
+                setStatus('Game Over - You resigned');
+            } else if (socket) {
+                socket.emit('resign');
+            }
+        }, [isGameActive, gameOver, isAIGame, socket]),
+
+        // Draw functions
+        offerDraw: useCallback(() => {
+            if (!isGameActive || gameOver || isAIGame || drawOffered) return;
+            if (socket) {
+                socket.emit('offerDraw');
+                setStatus('Draw offered - waiting for opponent response');
+            }
+        }, [isGameActive, gameOver, isAIGame, drawOffered, socket]),
+
+        acceptDraw: useCallback(() => {
+            if (!isGameActive || gameOver || isAIGame || !drawOffered) return;
+            if (socket) {
+                socket.emit('acceptDraw');
+            }
+        }, [isGameActive, gameOver, isAIGame, drawOffered, socket]),
+
+        declineDraw: useCallback(() => {
+            if (!isGameActive || gameOver || isAIGame || !drawOffered) return;
+            if (socket) {
+                socket.emit('declineDraw');
+                setDrawOffered(false);
+                setDrawOfferFrom(null);
+            }
+        }, [isGameActive, gameOver, isAIGame, drawOffered, socket]),
+
+        // Draw offer state
+        drawOffered,
+        drawOfferFrom
     };
 
     return (

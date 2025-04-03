@@ -136,7 +136,22 @@ const AIThinkingIndicator = styled.div`
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 const RANKS = ['1', '2', '3', '4', '5', '6', '7', '8'];
 
-const Board = () => {
+const DEMO_POSITIONS = [
+    {
+        board: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', // Starting position
+        flip: false
+    },
+    {
+        board: 'r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 1', // Common opening
+        flip: false
+    },
+    {
+        board: 'rnbqkb1r/pp2pppp/2p2n2/3p4/2PP4/2N5/PP2PPPP/R1BQKBNR w KQkq - 0 1', // Queens gambit
+        flip: true
+    }
+];
+
+const Board = ({ demoMode = false }) => {
     const { 
         game, 
         playerColor, 
@@ -150,12 +165,37 @@ const Board = () => {
     
     const [selectedSquare, setSelectedSquare] = useState(null);
     const [validMoves, setValidMoves] = useState([]);
+    const [currentDemoPosition, setCurrentDemoPosition] = useState(0);
+    
+    // Demo mode auto-rotation
+    useEffect(() => {
+        if (demoMode) {
+            const timer = setInterval(() => {
+                setCurrentDemoPosition((prev) => 
+                    prev === DEMO_POSITIONS.length - 1 ? 0 : prev + 1
+                );
+            }, 5000); // Rotate every 5 seconds
+            
+            return () => clearInterval(timer);
+        }
+    }, [demoMode]);
+    
+    // Set up demo position
+    useEffect(() => {
+        if (demoMode) {
+            const position = DEMO_POSITIONS[currentDemoPosition];
+            game.load(position.board);
+            // Force a re-render by triggering state update
+            setSelectedSquare(null);
+            setValidMoves([]);
+        }
+    }, [demoMode, currentDemoPosition, game]);
 
     useEffect(() => {
-        if (!isGameActive) {
+        if (!isGameActive && !demoMode) {
             game.reset();
         }
-    }, [game, isGameActive]);
+    }, [game, isGameActive, demoMode]);
 
     useEffect(() => {
         // Preload images
@@ -191,6 +231,7 @@ const Board = () => {
     };
 
     const isSquareClickable = (piece) => {
+        if (demoMode) return false;
         if (!isGameActive) return false;
         if (isAIThinking) return false;
         if (!piece) return validMoves.length > 0;
@@ -236,7 +277,7 @@ const Board = () => {
     const boardRanks = boardFlipped ? RANKS : [...RANKS].reverse();
 
     return (
-        <BoardWrapper isDisabled={isAIThinking}>
+        <BoardWrapper isDisabled={isAIThinking || demoMode}>
             {isAIThinking && (
                 <AIThinkingIndicator>
                     AI is thinking...
