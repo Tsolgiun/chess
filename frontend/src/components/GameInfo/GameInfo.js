@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import { useGame } from '../../context/GameContext';
+import GameResultModal from '../GameResultModal/GameResultModal';
 
 const fadeIn = keyframes`
   from {
@@ -71,17 +72,13 @@ const Status = styled.div`
     text-align: center;
     font-size: 1.1rem;
     font-weight: 600;
-    color: ${props => props.isGameOver ? '#e74c3c' : '#2ecc71'};
+    color: #2ecc71;
     padding: 12px;
-    background: ${props => props.isGameOver ? 
-        'linear-gradient(135deg, #fdf2f2 0%, #fde8e8 100%)' : 
-        'linear-gradient(135deg, #f0fff4 0%, #dcfce7 100%)'};
+    background: linear-gradient(135deg, #f0fff4 0%, #dcfce7 100%);
     border-radius: 8px;
     margin-top: 5px;
     animation: ${pulse} 2s infinite ease-in-out;
-    box-shadow: 0 2px 4px ${props => props.isGameOver ? 
-        'rgba(231, 76, 60, 0.1)' : 
-        'rgba(46, 204, 113, 0.1)'};
+    box-shadow: 0 2px 4px rgba(46, 204, 113, 0.1);
 `;
 
 const Button = styled.button`
@@ -188,7 +185,12 @@ const GameInfo = () => {
                     <Button onClick={handleNewGame}>New Game</Button>
                 </InfoRow>
             )}
-            <Status isGameOver={gameOver}>{status}</Status>
+            {!gameOver && <Status>{status}</Status>}
+            <GameResultModal 
+                show={gameOver}
+                result={status}
+                onNewGame={handleNewGame}
+            />
         </Container>
     );
 };

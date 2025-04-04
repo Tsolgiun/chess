@@ -2,8 +2,12 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { GameProvider } from './context/GameContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Home from './pages/Home';
 import Game from './pages/Game';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Profile from './pages/Profile';
 
 import './App.css';
 
@@ -30,6 +34,21 @@ const pageVariants = {
   }
 };
 
+const PrivateRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+  
+  return user ? children : <Navigate to="/login" />;
+};
+
+const PublicRoute = ({ children }) => {
+  const { user } = useAuth();
+  return user ? <Navigate to="/" /> : children;
+};
+
 const AnimatedRoutes = () => {
   const location = useLocation();
   
@@ -44,8 +63,27 @@ const AnimatedRoutes = () => {
         style={{ width: '100%', height: '100%' }}
       >
         <Routes location={location}>
+          <Route path="/login" element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          } />
+          <Route path="/register" element={
+            <PublicRoute>
+              <Register />
+            </PublicRoute>
+          } />
+          <Route path="/profile" element={
+            <PrivateRoute>
+              <Profile />
+            </PrivateRoute>
+          } />
           <Route path="/" element={<Home />} />
-          <Route path="/game/:gameId" element={<Game />} />
+          <Route path="/game/:gameId" element={
+            <PrivateRoute>
+              <Game />
+            </PrivateRoute>
+          } />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </motion.div>
@@ -56,11 +94,13 @@ const AnimatedRoutes = () => {
 function App() {
   return (
     <BrowserRouter>
-      <GameProvider>
-        <div className="App">
-          <AnimatedRoutes />
-        </div>
-      </GameProvider>
+      <AuthProvider>
+        <GameProvider>
+          <div className="App">
+            <AnimatedRoutes />
+          </div>
+        </GameProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

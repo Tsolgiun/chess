@@ -4,6 +4,8 @@ const http = require('http');
 const socketIo = require('socket.io');
 const { Chess } = require('chess.js');
 const connectDB = require('./config/database');
+const auth = require('./middleware/auth');
+const AuthController = require('./controllers/AuthController');
 const Game = require('./models/Game');
 const stockfishController = require('./controllers/StockfishController');
 
@@ -19,14 +21,37 @@ async function startServer() {
 
         // Initialize Express and Socket.io
         const app = express();
+
+// Enable CORS
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
+
 app.use(express.json());  // Add JSON body parser
+
 const server = http.createServer(app);
 const io = socketIo(server, {
     cors: {
         origin: "http://localhost:3000",
-        methods: ["GET", "POST"]
+        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        credentials: true
     }
 });
+
+// Auth routes
+app.post('/api/auth/register', AuthController.register);
+app.post('/api/auth/login', AuthController.login);
+app.get('/api/profile', auth, AuthController.getProfile);
+app.put('/api/profile', auth, AuthController.updateProfile);
 
 // Test endpoint for Stockfish
 app.post('/api/test-stockfish', async (req, res) => {
@@ -47,14 +72,6 @@ app.post('/api/test-stockfish', async (req, res) => {
         console.error('Stockfish error:', error);
         res.status(500).json({ error: 'Failed to calculate move: ' + error.message });
     }
-});
-
-// Enable CORS
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-    next();
 });
 
 // In-memory cache for active games

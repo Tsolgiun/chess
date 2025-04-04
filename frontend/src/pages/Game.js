@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import NavBar from '../components/NavBar/NavBar';
 import { motion } from 'framer-motion';
 import Board from '../components/Board/Board';
 import GameInfo from '../components/GameInfo/GameInfo';
@@ -8,8 +9,8 @@ import { useGame } from '../context/GameContext';
 
 const Container = styled(motion.div)`
   max-width: 1400px;
-  margin: 0 auto;
-  padding: 40px 20px;
+  margin: 80px auto 0;
+  padding: 20px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 40px;
@@ -17,25 +18,6 @@ const Container = styled(motion.div)`
   @media (max-width: 1200px) {
     grid-template-columns: 1fr;
     max-width: 800px;
-  }
-`;
-
-const Header = styled.header`
-  text-align: center;
-  margin-bottom: 40px;
-  grid-column: 1 / -1;
-`;
-
-const Title = styled(Link)`
-  font-size: 2rem;
-  color: #2c3e50;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-  transition: color 0.2s ease;
-
-  &:hover {
-    color: #3498db;
   }
 `;
 
@@ -97,9 +79,7 @@ const Game = () => {
         animate="animate"
         exit="exit"
       >
-        <Header>
-          <Title to="/">chess.mn</Title>
-        </Header>
+        <NavBar />
         <div style={{ textAlign: 'center', gridColumn: '1 / -1' }}>
           {status}
           <p>Redirecting to home page...</p>
@@ -115,9 +95,7 @@ const Game = () => {
       animate="animate"
       exit="exit"
     >
-      <Header>
-        <Title to="/">chess.mn</Title>
-      </Header>
+      <NavBar />
       <BoardWrapper>
         <Board />
       </BoardWrapper>

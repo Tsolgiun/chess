@@ -95,13 +95,14 @@ const Coordinate = styled.div`
 `;
 
 const moveAnimation = keyframes`
-    from {
-        transform: scale(1.1);
-        opacity: 0.8;
+    0% {
+        transform: translate(0, 0) scale(1);
     }
-    to {
-        transform: scale(1);
-        opacity: 1;
+    50% {
+        transform: translate(0, -5px) scale(1.05);
+    }
+    100% {
+        transform: translate(0, 0) scale(1);
     }
 `;
 
@@ -121,17 +122,6 @@ const Piece = styled.div`
     filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.2));
 `;
 
-const AIThinkingIndicator = styled.div`
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.7);
-    color: white;
-    padding: 10px 20px;
-    border-radius: 4px;
-    z-index: 3;
-`;
 
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 const RANKS = ['1', '2', '3', '4', '5', '6', '7', '8'];
@@ -277,12 +267,7 @@ const Board = ({ demoMode = false }) => {
     const boardRanks = boardFlipped ? RANKS : [...RANKS].reverse();
 
     return (
-        <BoardWrapper isDisabled={isAIThinking || demoMode}>
-            {isAIThinking && (
-                <AIThinkingIndicator>
-                    AI is thinking...
-                </AIThinkingIndicator>
-            )}
+        <BoardWrapper isDisabled={demoMode}>
             <BoardGrid>
                 {boardRanks.map(rank =>
                     boardFiles.map(file => {
