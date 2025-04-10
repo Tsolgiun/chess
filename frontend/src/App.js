@@ -1,13 +1,17 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+import { ThemeProvider } from 'styled-components';
 import { GameProvider } from './context/GameContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import GlobalStyle from './styles/GlobalStyle';
+import AnalysisTheme from './styles/AnalysisTheme';
 import Home from './pages/Home';
 import Game from './pages/Game';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
+import Analysis from './pages/Analysis';
 
 import './App.css';
 
@@ -84,6 +88,7 @@ const AnimatedRoutes = () => {
               <Game />
             </PrivateRoute>
           } />
+          <Route path="/analysis" element={<Analysis />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </motion.div>
@@ -93,15 +98,18 @@ const AnimatedRoutes = () => {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <GameProvider>
-          <div className="App">
-            <AnimatedRoutes />
-          </div>
-        </GameProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <ThemeProvider theme={AnalysisTheme}>
+      <GlobalStyle />
+      <BrowserRouter>
+        <AuthProvider>
+          <GameProvider>
+            <div className="App">
+              <AnimatedRoutes />
+            </div>
+          </GameProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
 

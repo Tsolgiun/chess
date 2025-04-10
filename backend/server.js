@@ -24,7 +24,22 @@ async function startServer() {
 
 // Enable CORS
 app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
+    // Allow multiple origins
+    const allowedOrigins = [
+        'http://localhost:3000',         // Web app local
+        'http://100.65.144.222:3000',    // Web app from other devices
+        'http://100.65.144.222:3001',    // For mobile devices
+        'http://192.168.56.1:3000',      // Backup IP for web app
+        'http://192.168.56.1:3001',      // Backup IP for mobile devices
+        'http://10.0.2.2:3001',          // Android emulator
+        'http://localhost:3001'          // Additional local testing
+    ];
+    const origin = req.headers.origin;
+    
+    if (allowedOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+    }
+    
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.header('Access-Control-Allow-Credentials', 'true');
@@ -41,7 +56,15 @@ app.use(express.json());  // Add JSON body parser
 const server = http.createServer(app);
 const io = socketIo(server, {
     cors: {
-        origin: "http://localhost:3000",
+        origin: [
+            "http://localhost:3000", 
+            "http://100.65.144.222:3000",
+            "http://100.65.144.222:3001",
+            "http://192.168.56.1:3000",
+            "http://192.168.56.1:3001",
+            "http://10.0.2.2:3001", 
+            "http://localhost:3001"
+        ],
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         credentials: true
     }
@@ -98,6 +121,12 @@ function generateGameId() {
 // Socket.io connection handling
 io.on('connection', (socket) => {
     console.log('New client connected:', socket.id);
+    
+    // Store platform information
+    socket.on('setPlatform', (data) => {
+        socket.data.platform = data.platform;
+        console.log(`Client ${socket.id} is using ${data.platform} platform`);
+    });
 
     // Create a new game
     socket.on('createGame', async () => {
@@ -109,7 +138,11 @@ io.on('connection', (socket) => {
             const game = await Game.create({
                 gameId,
                 fen: chess.fen(),
-                players: [{ socketId: socket.id, color: 'white' }],
+                players: [{ 
+                    socketId: socket.id, 
+                    color: 'white',
+                    platform: socket.data.platform || 'unknown'
+                }],
                 status: 'waiting'
             });
             
@@ -125,7 +158,11 @@ io.on('connection', (socket) => {
             socket.join(gameId);
             socket.data.color = 'white';
             socket.data.gameId = gameId;
-            socket.emit('gameCreated', { gameId, color: 'white' });
+            socket.emit('gameCreated', { 
+                gameId, 
+                color: 'white',
+                platform: socket.data.platform || 'unknown'
+            });
         } catch (error) {
             console.error('Create game error:', error);
             socket.emit('error', { message: 'Failed to create game' });
@@ -161,7 +198,11 @@ io.on('connection', (socket) => {
             }
             
             // Update database
-            dbGame.players.push({ socketId: socket.id, color: 'black' });
+            dbGame.players.push({ 
+                socketId: socket.id, 
+                color: 'black',
+                platform: socket.data.platform || 'unknown'
+            });
             dbGame.status = 'active';
             await dbGame.save();
             
@@ -171,13 +212,19 @@ io.on('connection', (socket) => {
             socket.data.gameId = gameId;
             games[gameId].players.black = socket.id;
             
+            // Get opponent's platform
+            const opponent = dbGame.players.find(p => p.socketId !== socket.id);
+            
             socket.emit('gameJoined', { 
                 gameId, 
                 color: 'black',
-                fen: games[gameId].chess.fen()
+                fen: games[gameId].chess.fen(),
+                opponentPlatform: opponent?.platform || 'unknown'
             });
             
-            socket.to(gameId).emit('opponentJoined');
+            socket.to(gameId).emit('opponentJoined', {
+                platform: socket.data.platform || 'unknown'
+            });
         } catch (error) {
             console.error('Join game error:', error);
             socket.emit('error', { message: 'Failed to join game' });
@@ -369,13 +416,40 @@ io.on('connection', (socket) => {
     // Handle AI move requests
     socket.on('requestAIMove', async (data) => {
         console.log('Received AI move request with FEN:', data.fen);
+        
+        // Validate FEN string
+        if (!data.fen || typeof data.fen !== 'string') {
+            console.error('Invalid FEN string received');
+            socket.emit('error', { message: 'Invalid FEN string' });
+            return;
+        }
+        
         try {
             if (!stockfishController.isReady) {
-                throw new Error('Stockfish engine not ready');
+                console.error('Stockfish engine not ready');
+                socket.emit('error', { message: 'Stockfish engine not ready' });
+                return;
             }
             
+            console.log('Requesting move from Stockfish engine...');
             const move = await stockfishController.getMove(data.fen);
+            
+            if (!move) {
+                console.error('Stockfish returned null or empty move');
+                socket.emit('error', { message: 'Failed to calculate a valid move' });
+                return;
+            }
+            
             console.log('Stockfish calculated move:', move);
+            
+            // Validate move format before sending
+            if (!/^[a-h][1-8][a-h][1-8][qrbnQRBN]?$/i.test(move)) {
+                console.error('Invalid move format returned by Stockfish:', move);
+                socket.emit('error', { message: 'Invalid move format returned by engine' });
+                return;
+            }
+            
+            // Emit the calculated move
             socket.emit('aiMoveCalculated', { move });
             console.log('Emitted aiMoveCalculated event with move:', move);
         } catch (error) {

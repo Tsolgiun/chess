@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import { useGame } from '../../context/GameContext';
 import GameResultModal from '../GameResultModal/GameResultModal';
+import Timer from '../Timer/Timer';
+import CapturedPieces from '../CapturedPieces/CapturedPieces';
 
 const fadeIn = keyframes`
   from {
@@ -30,12 +32,31 @@ const pulse = keyframes`
 const Container = styled.div`
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    padding: 20px;
-    background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+    gap: 20px;
+    padding: 24px;
+    background: #fff;
     border-radius: 12px;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
     animation: ${fadeIn} 0.5s ease-out;
+
+    /* Scrollbar styling */
+    &::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    &::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+        background: #bbb;
+        border-radius: 4px;
+        
+        &:hover {
+            background: #999;
+        }
+    }
 `;
 
 const InfoRow = styled.div`
@@ -43,13 +64,14 @@ const InfoRow = styled.div`
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background: white;
+    background: #f8f9fa;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    transition: transform 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
 
     &:hover {
-        transform: translateX(5px);
+        transform: translateX(4px);
+        background: #f1f3f5;
     }
 `;
 
@@ -108,6 +130,7 @@ const Button = styled.button`
 const GameInfo = () => {
     const navigate = useNavigate();
     const {
+        game,
         gameId,
         playerColor,
         status,
@@ -122,7 +145,8 @@ const GameInfo = () => {
         declineDraw,
         drawOffered,
         drawOfferFrom,
-        isAIGame
+        isAIGame,
+        opponentPlatform
     } = useGame();
 
     const handleNewGame = () => {
@@ -136,6 +160,11 @@ const GameInfo = () => {
 
     return (
         <Container>
+            <Timer 
+                isWhiteTurn={game.turn() === 'w'}
+                isGameActive={isGameActive}
+            />
+            <CapturedPieces position={game.fen()} />
             <InfoRow>
                 <Label>Game ID:</Label>
                 <Value>{gameId}</Value>
@@ -144,6 +173,12 @@ const GameInfo = () => {
                 <Label>Your Color:</Label>
                 <Value>{playerColor}</Value>
             </InfoRow>
+            {opponentPlatform && (
+                <InfoRow>
+                    <Label>Opponent Platform:</Label>
+                    <Value>{opponentPlatform}</Value>
+                </InfoRow>
+            )}
             <InfoRow>
                 <Label>Board Orientation:</Label>
                 <Button onClick={() => setBoardFlipped(!boardFlipped)}>

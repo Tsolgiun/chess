@@ -1,19 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useGame } from '../../context/GameContext';
+import { loadSounds, playMoveSound } from '../../utils/sounds';
 
 const BoardWrapper = styled.div`
     width: min(80vw, 640px);
     margin: 0 auto;
     position: relative;
-    background: #2c3e50;
+    background: #262421;
     padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
     ${props => props.isDisabled && `
         pointer-events: none;
         opacity: 0.8;
     `}
+    
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 14px 28px rgba(0, 0, 0, 0.35);
+    }
 `;
 
 const BoardGrid = styled.div`
@@ -30,12 +37,13 @@ const BoardGrid = styled.div`
 const Square = styled.div`
     aspect-ratio: 1;
     position: relative;
-    background-color: ${props => (props.isLight ? '#f0d9b5' : '#b58863')};
+    background-color: ${props => (props.isLight ? '#ebecd0' : '#779556')};
     cursor: ${props => props.isClickable ? 'pointer' : 'default'};
-    transition: transform 0.15s ease;
+    transition: all 0.2s ease;
     
     &:hover {
-        transform: ${props => props.isClickable ? 'scale(1.02)' : 'none'};
+        transform: ${props => props.isClickable ? 'scale(1.01)' : 'none'};
+        box-shadow: ${props => props.isClickable ? 'inset 0 0 30px rgba(255, 255, 255, 0.1)' : 'none'};
     }
     
     ${props => props.isSelected && `
@@ -43,7 +51,7 @@ const Square = styled.div`
             content: '';
             position: absolute;
             inset: 0;
-            background: rgba(106, 159, 181, 0.4);
+            background: rgba(255, 255, 0, 0.35);
             z-index: 1;
         }
     `}
@@ -52,19 +60,26 @@ const Square = styled.div`
         &::after {
             content: '';
             position: absolute;
-            width: 30%;
-            height: 30%;
+            width: 33%;
+            height: 33%;
             border-radius: 50%;
-            background-color: rgba(106, 159, 181, 0.6);
+            background-color: ${props.isLight ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.15)'};
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             z-index: 1;
+            transition: all 0.2s ease;
+        }
+        
+        &:hover::after {
+            transform: translate(-50%, -50%) scale(1.2);
+            background-color: ${props.isLight ? 'rgba(0, 0, 0, 0.18)' : 'rgba(255, 255, 255, 0.22)'};
         }
     `}
 
     ${props => props.isLastMove && `
-        box-shadow: inset 0 0 0 3px rgba(155, 199, 0, 0.6);
+        background-color: ${props.isLight ? '#f6f669' : '#baca2b'};
+        opacity: 0.85;
     `}
 `;
 
@@ -96,30 +111,59 @@ const Coordinate = styled.div`
 
 const moveAnimation = keyframes`
     0% {
-        transform: translate(0, 0) scale(1);
+        opacity: 0;
+        transform: scale(0.8);
     }
     50% {
-        transform: translate(0, -5px) scale(1.05);
+        opacity: 1;
+        transform: scale(1.1);
     }
     100% {
-        transform: translate(0, 0) scale(1);
+        opacity: 1;
+        transform: scale(1);
+    }
+`;
+
+const hoverAnimation = keyframes`
+    0% {
+        filter: brightness(1);
+    }
+    50% {
+        filter: brightness(1.1);
+    }
+    100% {
+        filter: brightness(1);
     }
 `;
 
 const Piece = styled.div`
     position: absolute;
-    top: 5%;
-    left: 5%;
-    width: 90%;
-    height: 90%;
+    top: 2.5%;
+    left: 2.5%;
+    width: 95%;
+    height: 95%;
     background-image: url(${props => props.image});
     background-size: contain;
     background-position: center;
     background-repeat: no-repeat;
     z-index: 2;
     pointer-events: none;
-    animation: ${moveAnimation} 0.3s ease;
-    filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.2));
+    animation: ${moveAnimation} 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.3));
+    transition: all 0.2s ease;
+    
+    ${props => props.isClickable && `
+        cursor: grab;
+        animation: ${hoverAnimation} 2s infinite ease-in-out;
+        
+        &:hover {
+            filter: drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.4));
+        }
+        
+        &:active {
+            cursor: grabbing;
+        }
+    `}
 `;
 
 
@@ -141,17 +185,30 @@ const DEMO_POSITIONS = [
     }
 ];
 
-const Board = ({ demoMode = false }) => {
+const Board = ({ demoMode = false, analysisMode = false, position = null, boardFlipped = false }) => {
+    const gameContext = useGame();
+    
     const { 
         game, 
         playerColor, 
         makeMove, 
-        boardFlipped, 
         isGameActive,
         isAIGame,
         isAIThinking,
         lastMove
-    } = useGame();
+    } = analysisMode ? { 
+        game: position, 
+        playerColor: 'white',
+        makeMove: () => true,
+        isGameActive: true,
+        isAIGame: false,
+        isAIThinking: false,
+        lastMove: null
+    } : gameContext;
+
+    // Use local state for analysis mode board flipping
+    const [localBoardFlipped, setLocalBoardFlipped] = useState(false);
+    const effectiveBoardFlipped = analysisMode ? localBoardFlipped : boardFlipped;
     
     const [selectedSquare, setSelectedSquare] = useState(null);
     const [validMoves, setValidMoves] = useState([]);
@@ -188,8 +245,9 @@ const Board = ({ demoMode = false }) => {
     }, [game, isGameActive, demoMode]);
 
     useEffect(() => {
-        // Preload images
-        const preloadImages = () => {
+        // Preload images and sounds
+        const preloadAssets = () => {
+            // Preload images
             const pieces = ['pawn', 'rook', 'knight', 'bishop', 'queen', 'king'];
             const colors = ['white', 'black'];
             
@@ -200,9 +258,12 @@ const Board = ({ demoMode = false }) => {
                     img.onerror = (e) => console.error(`Failed to load piece image:`, e);
                 });
             });
+
+            // Preload sounds
+            loadSounds();
         };
         
-        preloadImages();
+        preloadAssets();
     }, []);
 
     const getPieceImage = (piece) => {
@@ -222,6 +283,7 @@ const Board = ({ demoMode = false }) => {
 
     const isSquareClickable = (piece) => {
         if (demoMode) return false;
+        if (analysisMode) return true;
         if (!isGameActive) return false;
         if (isAIThinking) return false;
         if (!piece) return validMoves.length > 0;
@@ -231,34 +293,70 @@ const Board = ({ demoMode = false }) => {
     const handleSquareClick = (square) => {
         const piece = game.get(square);
 
-        if (selectedSquare === square) {
-            setSelectedSquare(null);
-            setValidMoves([]);
-            return;
-        }
-
-        if (selectedSquare) {
-            if (validMoves.includes(square)) {
-                const move = {
-                    from: selectedSquare,
-                    to: square,
-                    promotion: 'q' // Default to queen for now
-                };
-
-                if (makeMove(move)) {
-                    setSelectedSquare(null);
-                    setValidMoves([]);
-                    return;
-                }
+        if (analysisMode) {
+            if (selectedSquare === square) {
+                setSelectedSquare(null);
+                setValidMoves([]);
+                return;
             }
-            setSelectedSquare(null);
-            setValidMoves([]);
-        }
 
-        if (piece && piece.color === (playerColor === 'white' ? 'w' : 'b')) {
-            setSelectedSquare(square);
-            const moves = game.moves({ square, verbose: true });
-            setValidMoves(moves.map(move => move.to));
+            if (selectedSquare) {
+                try {
+                    game.move({
+                        from: selectedSquare,
+                        to: square,
+                        promotion: 'q'
+                    });
+                } catch (error) {
+                    console.log('Invalid move');
+                }
+                setSelectedSquare(null);
+                setValidMoves([]);
+                return;
+            }
+
+            if (piece) {
+                setSelectedSquare(square);
+                const moves = game.moves({ square, verbose: true });
+                setValidMoves(moves.map(move => move.to));
+            }
+        } else {
+            // Normal game mode logic
+            if (selectedSquare === square) {
+                setSelectedSquare(null);
+                setValidMoves([]);
+                return;
+            }
+
+            if (selectedSquare) {
+                if (validMoves.includes(square)) {
+                    const move = {
+                        from: selectedSquare,
+                        to: square,
+                        promotion: 'q'
+                    };
+
+                    const result = makeMove(move);
+                    if (result) {
+                        // Play appropriate sound
+                        const moveNotation = game.history().slice(-1)[0];
+                        const isCheck = game.isCheck();
+                        playMoveSound(moveNotation, isCheck);
+                        
+                        setSelectedSquare(null);
+                        setValidMoves([]);
+                        return;
+                    }
+                }
+                setSelectedSquare(null);
+                setValidMoves([]);
+            }
+
+            if (piece && piece.color === (playerColor === 'white' ? 'w' : 'b')) {
+                setSelectedSquare(square);
+                const moves = game.moves({ square, verbose: true });
+                setValidMoves(moves.map(move => move.to));
+            }
         }
     };
 

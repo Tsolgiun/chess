@@ -21,6 +21,7 @@ export const GameProvider = ({ children }) => {
     const [lastMove, setLastMove] = useState(null);
     const [drawOffered, setDrawOffered] = useState(false);
     const [drawOfferFrom, setDrawOfferFrom] = useState(null);
+    const [opponentPlatform, setOpponentPlatform] = useState(null);
 
     // Utility functions
     const updateStatus = useCallback((currentGame) => {
@@ -155,6 +156,7 @@ export const GameProvider = ({ children }) => {
         setLastMove(null);
         setDrawOffered(false);
         setDrawOfferFrom(null);
+        setOpponentPlatform(null);
         setStatus('Welcome to Online Chess!');
     }, []);
 
@@ -179,8 +181,33 @@ export const GameProvider = ({ children }) => {
     // Socket initialization and event handlers
     useEffect(() => {
         const newSocket = io('http://localhost:3001', {
-            transports: ['websocket', 'polling']
+            transports: ['websocket', 'polling'],
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            timeout: 20000
         });
+        
+        // Log connection events for debugging
+        newSocket.on('connect', () => {
+            console.log('Socket connected successfully');
+            
+            // Send platform information
+            newSocket.emit('setPlatform', { platform: 'web' });
+        });
+        
+        newSocket.on('connect_error', (error) => {
+            console.error('Socket connection error:', error);
+        });
+        
+        newSocket.on('disconnect', (reason) => {
+            console.log('Socket disconnected:', reason);
+        });
+        
+        newSocket.on('reconnect', (attemptNumber) => {
+            console.log('Socket reconnected after', attemptNumber, 'attempts');
+        });
+        
         window.socket = newSocket;
         setSocket(newSocket);
 
@@ -202,11 +229,12 @@ export const GameProvider = ({ children }) => {
             setGame(newGame);
         });
 
-        socket.on('gameJoined', ({ gameId, color, fen }) => {
+        socket.on('gameJoined', ({ gameId, color, fen, opponentPlatform }) => {
             setGameId(gameId);
             setPlayerColor(color);
             setIsGameActive(true);
-            setStatus('Game started! You are playing as Black.');
+            setOpponentPlatform(opponentPlatform);
+            setStatus(`Game started! You are playing as ${color === 'white' ? 'White' : 'Black'}.`);
             if (fen) {
                 const newGame = new Chess(fen);
                 setGame(newGame);
@@ -216,8 +244,9 @@ export const GameProvider = ({ children }) => {
             }
         });
 
-        socket.on('opponentJoined', () => {
+        socket.on('opponentJoined', ({ platform }) => {
             setStatus('Game started! You are playing as White.');
+            setOpponentPlatform(platform);
         });
 
         socket.on('moveMade', ({ from, to, promotion, fen }) => {
@@ -282,6 +311,7 @@ export const GameProvider = ({ children }) => {
         isAIGame,
         isAIThinking,
         lastMove,
+        opponentPlatform,
         createGame: useCallback(() => {
             if (socket) {
                 resetGameState();

@@ -106,6 +106,7 @@ const NavBar = () => {
         ) : (
           <>
             <Button to="/profile">Profile</Button>
+            <Button to="/analysis">Analysis</Button>
             <LogoutButton onClick={handleLogout}>Logout</LogoutButton>
           </>
         )}

@@ -90,6 +90,9 @@ class StockfishController {
             }
 
             console.log('Calculating move for FEN:', fen);
+            
+            // Flag to track if we've already resolved/rejected the promise
+            let isResolved = false;
 
             const moveHandler = (data) => {
                 const output = data.toString();
@@ -97,12 +100,18 @@ class StockfishController {
 
                 if (output.includes('bestmove')) {
                     const match = output.match(/bestmove ([a-h][1-8][a-h][1-8][qrbnQRBN]?)/);
-                    if (match) {
+                    if (match && !isResolved) {
                         const move = match[1].toLowerCase();
                         console.log('Found best move:', move);
                         this.engine.stdout.removeListener('data', moveHandler);
                         if (callback) callback(move);
+                        isResolved = true;
                         resolve(move);
+                    } else if (!match && !isResolved) {
+                        console.error('Could not parse bestmove from output:', output);
+                        this.engine.stdout.removeListener('data', moveHandler);
+                        isResolved = true;
+                        reject(new Error('Failed to parse move'));
                     }
                 }
             };
@@ -112,15 +121,18 @@ class StockfishController {
             // Ensure engine is ready before sending new position
             this.engine.stdin.write('isready\n');
             this.engine.stdin.write(`position fen ${fen}\n`);
-            this.engine.stdin.write('go movetime 1000\n');
+            this.engine.stdin.write('go movetime 2000\n'); // Increased time for move calculation
 
-            // Set move calculation timeout
+            // Set move calculation timeout - increased to 5 seconds
             setTimeout(() => {
-                console.log('Move calculation timeout');
-                this.engine.stdout.removeListener('data', moveHandler);
-                this.stop();
-                reject(new Error('Move calculation timeout'));
-            }, 3000);
+                if (!isResolved) {
+                    console.log('Move calculation timeout');
+                    this.engine.stdout.removeListener('data', moveHandler);
+                    this.stop();
+                    isResolved = true;
+                    reject(new Error('Move calculation timeout'));
+                }
+            }, 5000); // Increased from 3000 to 5000 ms
         });
     }
 

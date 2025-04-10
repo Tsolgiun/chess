@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import NavBar from '../components/NavBar/NavBar';
 import { motion } from 'framer-motion';
 import Board from '../components/Board/Board';
 import GameInfo from '../components/GameInfo/GameInfo';
+import MoveHistory from '../components/MoveHistory/MoveHistory';
 import { useGame } from '../context/GameContext';
 
 const Container = styled(motion.div)`
@@ -12,8 +13,9 @@ const Container = styled(motion.div)`
   margin: 80px auto 0;
   padding: 20px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(auto, 700px) minmax(300px, 1fr);
   gap: 40px;
+  align-items: start;
 
   @media (max-width: 1200px) {
     grid-template-columns: 1fr;
@@ -39,7 +41,16 @@ const ContentWrapper = styled(motion.div)`
 const Game = () => {
   const { gameId } = useParams();
   const navigate = useNavigate();
-  const { joinGame, isGameActive, status } = useGame();
+  const { joinGame, isGameActive, status, game } = useGame();
+  const [moves, setMoves] = useState([]);
+
+  // Track moves
+  useEffect(() => {
+    if (game) {
+      const history = game.history();
+      setMoves(history);
+    }
+  }, [game]);
 
   useEffect(() => {
     if (gameId && !isGameActive) {
@@ -100,6 +111,7 @@ const Game = () => {
         <Board />
       </BoardWrapper>
       <ContentWrapper>
+        <MoveHistory moves={moves} />
         <GameInfo />
       </ContentWrapper>
     </Container>

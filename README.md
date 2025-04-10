@@ -1,156 +1,139 @@
-# Web-Based International Chess System
+# Chess Application
 
-A modern web-based chess platform built with React, Node.js, and Stockfish integration.
+A comprehensive chess application with mobile, web, and backend components.
 
-## System Architecture
+## Project Structure
 
-### Backend Architecture
-```mermaid
-flowchart TB
-    LB[Load Balancer] --> N1[Node.js Instance 1]
-    LB --> N2[Node.js Instance 2]
-    LB --> N3[Node.js Instance 3]
-    
-    subgraph "Node.js Instances"
-        N1 --> EL1[Event Loop]
-        N2 --> EL2[Event Loop]
-        N3 --> EL3[Event Loop]
-        
-        N1 --> S1[Stockfish Engine]
-        N2 --> S2[Stockfish Engine]
-        N3 --> S3[Stockfish Engine]
-    end
-    
-    subgraph "Shared Resources"
-        DB[(MongoDB)]
-        RC[(Redis Cache)]
-        WS[WebSocket Manager]
-    end
-    
-    N1 -.-> DB
-    N2 -.-> DB
-    N3 -.-> DB
-    
-    N1 -.-> RC
-    N2 -.-> RC
-    N3 -.-> RC
-    
-    N1 -.-> WS
-    N2 -.-> WS
-    N3 -.-> WS
-    
-    WS --> C1[Client 1]
-    WS --> C2[Client 2]
-    WS --> C3[Client 3]
+This project consists of three main components:
+
+1. **ChessAppMobile**: A React Native mobile app with web support using Expo
+2. **frontend**: A React web application
+3. **backend**: A Node.js server with Socket.io for real-time communication
+
+## Key Features
+
+- Cross-platform support (mobile and web)
+- Real-time multiplayer chess
+- AI opponent with adjustable difficulty
+- User authentication
+- Game history and analysis
+- Responsive design
+
+## Architecture Improvements
+
+The mobile app has been refactored to improve cross-platform compatibility and code organization:
+
+### Modular Architecture
+
+- **Separation of Concerns**: Game logic, networking, and UI are now separated
+- **Platform Abstraction**: Platform-specific code is isolated behind interfaces
+- **Unified Components**: Shared components work across platforms
+
+### Cross-Platform Support
+
+- **Socket Management**: Robust socket connection handling with fallback URLs
+- **AI Integration**: Consistent AI behavior across platforms
+- **Game State Management**: Unified game state management
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v14 or later)
+- npm or yarn
+- Expo CLI (for mobile development): `npm install -g expo-cli`
+
+### Installation
+
+```bash
+# Install dependencies for all components
+npm run install:all
+
+# Or install components individually
+npm run install:backend
+npm run install:mobile
+npm run install:frontend
 ```
 
-### Game Flow
-```mermaid
-stateDiagram-v2
-    [*] --> StartGame
-    StartGame --> GameMode
-    GameMode --> AIGame: Select AI
-    GameMode --> MultiplayerGame: Select Multiplayer
-    
-    AIGame --> MovePiece
-    MultiplayerGame --> MovePiece
-    
-    MovePiece --> ValidateMove
-    ValidateMove --> MovePiece: Invalid Move
-    ValidateMove --> CheckGameState
-    
-    CheckGameState --> MovePiece: Continue Game
-    CheckGameState --> [*]: Game Over
+### Running the Application
+
+#### Development Mode (Mobile App + Backend)
+
+```bash
+npm run dev:mobile
 ```
 
-### Component Interaction
-```mermaid
-sequenceDiagram
-    participant C as Client (React)
-    participant GC as GameContext
-    participant WS as WebSocket
-    participant N as Node.js Server
-    participant S as Stockfish Engine
-    participant DB as MongoDB
-    participant R as Redis Cache
+#### Development Mode (Web App + Backend)
 
-    Note over C,R: Game Initialization Flow
-    C->>WS: Connect to WebSocket
-    WS->>N: Initialize connection
-    N->>R: Create session
-    
-    Note over C,R: Starting New Game
-    C->>GC: Start new game
-    GC->>N: Request game creation
-    N->>DB: Create game record
-    N->>R: Cache game state
-    N-->>C: Return game ID & initial state
-
-    alt AI Game Mode
-        Note over C,S: AI Game Flow
-        C->>GC: Make move
-        GC->>N: Send move
-        N->>S: Request best move (UCI)
-        S-->>N: Return calculated move
-        N->>DB: Save game state
-        N->>R: Update cache
-        N->>WS: Broadcast move
-        WS-->>C: Update UI
-        GC->>C: Refresh board state
-
-    else Multiplayer Game Mode
-        Note over C,R: Player vs Player Flow
-        C->>GC: Make move
-        GC->>N: Validate & send move
-        N->>DB: Save game state
-        N->>R: Update cache
-        N->>WS: Broadcast to opponents
-        WS-->>C: Update all clients
-        GC->>C: Refresh board state
-    end
+```bash
+npm run dev
 ```
 
-## Component Interaction Details
+#### Development Mode (React Frontend + Backend)
 
-The component interaction in our International Chess system represents a sophisticated interplay between various layers and services. When a user starts a chess match, the React frontend establishes a WebSocket connection with the Node.js server, enabling real-time bidirectional communication. The GameContext, implemented using React's Context API, serves as a central state management solution, handling chess-specific state like piece positions, captured pieces, move history, and game status (check, checkmate, or stalemate).
+```bash
+npm run dev:frontend
+```
 
-### Communication Flow
-The communication flow begins when a player makes a move on the chessboard. The move is first processed by the GameContext, which manages the local game state and validates basic chess rules including piece movement patterns, castling conditions, en passant opportunities, and pawn promotion scenarios. The validated move is then transmitted through the WebSocket connection to the Node.js server. The server acts as the authoritative source of truth, performing deep validation of chess rules and maintaining game consistency.
+#### Running Components Individually
 
-### AI Integration
-In AI game mode, the server interfaces with the Stockfish chess engine through the UCI (Universal Chess Interface) protocol. When a player makes a move, the server translates the game state into FEN (Forsyth–Edwards Notation) notation, which is sent to Stockfish. The engine, renowned for its strong chess play, calculates the optimal response based on configured difficulty levels and returns it to the server, which then broadcasts the move to the client through WebSocket channels. Stockfish's evaluation of positions and suggested lines of play can also be transmitted to provide analysis features for players.
+```bash
+# Start the backend server
+npm run start:backend
 
-### Multiplayer Handling
-For multiplayer games, the server manages concurrent chess matches and player interactions. When a move is made, it's first validated against standard chess rules, then persisted in MongoDB for long-term storage and cached in Redis for quick access. The updated game state, including the board position, captured pieces, and time controls, is broadcast to both players in real-time through WebSocket connections, ensuring perfect synchronization of the game state.
+# Start the mobile app
+npm run start:mobile
 
-### Data Management
-Data persistence is handled through a dual-layer approach:
-- **Redis**: Provides high-speed caching for active chess matches, storing ephemeral data like current positions, time controls, and player sessions
-- **MongoDB**: Serves as the permanent data store for completed games, user profiles, ELO ratings, and match statistics
+# Start the web version of the mobile app
+npm run start:web
 
-### Error Handling
-Error handling is implemented across all layers of the system. The frontend components gracefully handle connection issues and illegal moves, while the server manages game state conflicts and engine communication errors. WebSocket connections are monitored for disconnections, with automatic reconnection attempts and game state recovery mechanisms in place to ensure a smooth user experience, particularly crucial during timed matches.
+# Start the React frontend
+npm run start:frontend
+```
 
-### Scalability
-The entire system is designed to be scalable, with the Node.js server instances running behind a load balancer. Each server instance maintains its own Stockfish engine processes and WebSocket connections, while sharing game state through the Redis cache. This architecture allows for horizontal scaling to handle increasing numbers of concurrent chess games while maintaining consistent performance and real-time responsiveness.
+#### Building for Production
 
-## Technology Stack
+```bash
+# Build the web version of the mobile app
+npm run build:web
+```
 
-### Frontend
-- React + TypeScript
-- Material UI components
-- WebSocket for real-time updates
-- Context API for state management
+## Mobile App Architecture
 
-### Backend
-- Node.js + Express
-- MongoDB for data persistence
-- Redis for caching
-- Socket.IO for WebSocket communication
-- Stockfish chess engine
+The mobile app has been refactored with a clean architecture:
 
-### DevOps
-- Docker for containerization
-- Load balancer for horizontal scaling
-- Automated testing with Jest
-- Git for version control
+### Core Components
+
+1. **SocketManager**: Handles socket connections with automatic reconnection and fallback URLs
+2. **GameState**: Manages the state of a chess game, including board position, moves, and game status
+3. **GameManager**: Provides a unified interface for game management across platforms
+4. **ChessAIService**: Provides a unified interface for AI chess moves across platforms
+
+### Platform Abstraction
+
+1. **PlatformInterface**: Defines the interface for platform-specific functionality
+2. **MobilePlatform**: Mobile-specific implementation
+3. **WebPlatform**: Web-specific implementation
+4. **PlatformFactory**: Factory for creating platform-specific implementations
+
+### Unified Components
+
+1. **UnifiedPiece**: Cross-platform chess piece component
+2. **ChessBoard**: Cross-platform chess board component
+3. **GameScreen**: Cross-platform game screen
+
+## Documentation
+
+Each component has its own README with detailed documentation:
+
+- [ChessAppMobile Documentation](./ChessAppMobile/README.md)
+- [Frontend Documentation](./frontend/README.md)
+- [Backend Documentation](./backend/README.md)
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/my-feature`)
+3. Commit your changes (`git commit -am 'Add my feature'`)
+4. Push to the branch (`git push origin feature/my-feature`)
+5. Create a new Pull Request

@@ -5,6 +5,11 @@ const playerSchema = new mongoose.Schema({
     color: {
         type: String,
         enum: ['white', 'black']
+    },
+    platform: {
+        type: String,
+        enum: ['web', 'mobile', 'unknown'],
+        default: 'unknown'
     }
 });
 
