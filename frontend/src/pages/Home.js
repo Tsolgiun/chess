@@ -13,6 +13,9 @@ const Container = styled(motion.div)`
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 40px;
+  background: ${({ theme }) => theme.colors.primary};
+  transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  min-height: calc(100vh - 80px);
 
   @media (max-width: 1200px) {
     grid-template-columns: 1fr;
@@ -22,39 +25,56 @@ const Container = styled(motion.div)`
 
 const BoardWrapper = styled(motion.div)`
   position: relative;
-  background: white;
+  background: ${({ theme }) => theme.colors.secondary};
   border-radius: 16px;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
   padding: 30px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.4);
+  }
 `;
 
 const BoardOverlay = styled(motion.div)`
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 12px;
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(3px);
   pointer-events: none;
+  transition: background-color 0.3s ease, backdrop-filter 0.3s ease, opacity 0.3s ease;
 `;
 
 const OverlayText = styled.div`
-  color: white;
+  color: ${({ theme }) => theme.colors.text};
   font-size: 1.5rem;
   font-weight: 600;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   padding: 20px 40px;
-  background: rgba(0, 0, 0, 0.7);
+  background: ${({ theme }) => `${theme.colors.secondary}E6`};
   border-radius: 8px;
+  transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
 `;
 
 const ContentWrapper = styled(motion.div)`
-  background: white;
+  background: ${({ theme }) => theme.colors.secondary};
+  color: ${({ theme }) => theme.colors.text};
   border-radius: 16px;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
   padding: 30px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  transition: background-color 0.3s ease, color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.4);
+  }
 `;
 
 const Home = () => {

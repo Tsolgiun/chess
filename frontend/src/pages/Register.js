@@ -8,15 +8,18 @@ const Container = styled.div`
   max-width: 400px;
   margin: 120px auto;
   padding: 20px;
-  background: white;
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.text};
   border-radius: 12px;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s ease, color 0.3s ease;
 `;
 
 const Title = styled.h1`
   text-align: center;
-  color: #2c3e50;
+  color: ${({ theme }) => theme.colors.text};
   margin-bottom: 24px;
+  transition: color 0.3s ease;
 `;
 
 const Form = styled.form`
@@ -27,21 +30,24 @@ const Form = styled.form`
 
 const Input = styled.input`
   padding: 12px;
-  border: 1px solid #e1e1e1;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 6px;
   font-size: 16px;
+  background-color: ${({ theme }) => theme.colors.secondary};
+  color: ${({ theme }) => theme.colors.text};
+  transition: all 0.3s ease;
   
   &:focus {
     outline: none;
-    border-color: #3498db;
-    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+    border-color: ${({ theme }) => theme.colors.accent};
+    box-shadow: 0 0 0 2px ${({ theme }) => `${theme.colors.accent}33`};
   }
 `;
 
 const Button = styled.button`
   padding: 12px;
-  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-  color: white;
+  background: ${({ theme }) => theme.colors.accent};
+  color: ${({ theme }) => theme.isDarkMode ? '#000000' : '#ffffff'};
   border: none;
   border-radius: 6px;
   font-size: 16px;
@@ -52,6 +58,7 @@ const Button = styled.button`
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    opacity: 0.9;
   }
 
   &:active {
@@ -59,7 +66,7 @@ const Button = styled.button`
   }
 
   &:disabled {
-    background: #cccccc;
+    background: ${({ theme }) => theme.colors.border};
     cursor: not-allowed;
     transform: none;
   }
@@ -74,9 +81,10 @@ const Error = styled.div`
 
 const LinkText = styled(Link)`
   text-align: center;
-  color: #3498db;
+  color: ${({ theme }) => theme.colors.accent};
   text-decoration: none;
   font-size: 14px;
+  transition: color 0.3s ease;
   
   &:hover {
     text-decoration: underline;
@@ -85,11 +93,13 @@ const LinkText = styled(Link)`
 
 const PasswordRequirements = styled.div`
   font-size: 12px;
-  color: #7f8c8d;
+  color: ${({ theme }) => theme.colors.text};
+  opacity: 0.7;
   padding: 8px;
   border-radius: 4px;
-  background: #f8f9fa;
+  background: ${({ theme }) => theme.colors.secondary};
   margin-top: -8px;
+  transition: background-color 0.3s ease, color 0.3s ease;
 `;
 
 const Register = () => {

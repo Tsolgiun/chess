@@ -11,7 +11,7 @@ class StockfishController {
         return new Promise((resolve, reject) => {
             try {
                 // Initialize engine process
-                const enginePath = path.join(__dirname, '../../frontend/public/stockfish/stockfish-windows-x86-64-avx2.exe');
+                const enginePath = path.join(__dirname, '../bin/stockfish/stockfish-windows-x86-64-avx2.exe');
                 console.log('Initializing Stockfish engine at path:', enginePath);
                 
                 this.engine = spawn(enginePath);
@@ -133,6 +133,99 @@ class StockfishController {
                     reject(new Error('Move calculation timeout'));
                 }
             }, 5000); // Increased from 3000 to 5000 ms
+        });
+    }
+
+    analyze(fen, depth = 20) {
+        return new Promise((resolve, reject) => {
+            if (!this.isReady || !this.engine) {
+                const error = new Error('Engine not ready');
+                console.error(error);
+                reject(error);
+                return;
+            }
+
+            console.log('Analyzing position with FEN:', fen);
+            
+            // Flag to track if we've already resolved/rejected the promise
+            let isResolved = false;
+            let analysisLines = [];
+
+            const analysisHandler = (data) => {
+                const output = data.toString();
+                
+                // Parse info lines
+                if (output.includes('info') && output.includes('score') && output.includes('pv')) {
+                    try {
+                        const depthMatch = output.match(/depth (\d+)/);
+                        const scoreMatch = output.match(/score (cp|mate) (-?\d+)/);
+                        const pvMatch = output.match(/pv (.+)$/);
+                        const multipvMatch = output.match(/multipv (\d+)/);
+                        
+                        if (depthMatch && scoreMatch && pvMatch) {
+                            const currentDepth = parseInt(depthMatch[1]);
+                            let evaluation;
+                            
+                            if (scoreMatch[1] === 'cp') {
+                                evaluation = parseInt(scoreMatch[2]) / 100;
+                            } else {
+                                // Mate score
+                                const moves = parseInt(scoreMatch[2]);
+                                evaluation = moves > 0 ? 999 : -999;
+                            }
+                            
+                            const moves = pvMatch[1].split(' ').slice(0, 5);
+                            const multipv = multipvMatch ? parseInt(multipvMatch[1]) : 1;
+                            
+                            // Create analysis line
+                            const line = {
+                                depth: currentDepth,
+                                evaluation,
+                                moves,
+                                multipv
+                            };
+                            
+                            // Update or add the line
+                            const existingIndex = analysisLines.findIndex(l => l.multipv === multipv);
+                            if (existingIndex >= 0) {
+                                analysisLines[existingIndex] = line;
+                            } else {
+                                analysisLines.push(line);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error parsing analysis output:', error);
+                    }
+                }
+                
+                // Check if analysis is complete
+                if (output.includes('bestmove')) {
+                    if (!isResolved) {
+                        this.engine.stdout.removeListener('data', analysisHandler);
+                        isResolved = true;
+                        resolve(analysisLines);
+                    }
+                }
+            };
+
+            this.engine.stdout.on('data', analysisHandler);
+
+            // Ensure engine is ready before sending new position
+            this.engine.stdin.write('isready\n');
+            this.engine.stdin.write('setoption name MultiPV value 3\n');
+            this.engine.stdin.write(`position fen ${fen}\n`);
+            this.engine.stdin.write(`go depth ${depth}\n`);
+
+            // Set analysis timeout - 10 seconds
+            setTimeout(() => {
+                if (!isResolved) {
+                    console.log('Analysis timeout');
+                    this.engine.stdout.removeListener('data', analysisHandler);
+                    this.stop();
+                    isResolved = true;
+                    resolve(analysisLines); // Resolve with whatever we have so far
+                }
+            }, 10000);
         });
     }
 

@@ -2,7 +2,6 @@ import { Chess } from 'chess.js';
 
 class StockfishService {
     constructor() {
-        this.engine = null;
         this.isAnalyzing = false;
         this.currentFen = '';
         this.onLineCallback = null;
@@ -10,41 +9,39 @@ class StockfishService {
     }
 
     async init() {
-        if (this.engine) return;
+        // No initialization needed since we're using backend API
+        return Promise.resolve();
+    }
 
+    async getMove(fen) {
         try {
-            this.engine = new Worker('/stockfish/stockfish.js');
-            
-            this.engine.onmessage = (e) => {
-                this.handleEngineOutput(e.data);
-            };
-
-            setTimeout(() => {
-                // Give time for Stockfish WASM to initialize
-                this.engine.postMessage('uci');
-                this.engine.postMessage('setoption name MultiPV value 3');
-                this.engine.postMessage('isready');
-            }, 500);
-
-            return new Promise((resolve, reject) => {
-                let checkReady = (e) => {
-                    if (e.data === 'readyok') {
-                        this.engine.removeEventListener('message', checkReady);
-                        console.log('Stockfish engine ready');
-                        resolve();
-                    }
-                };
-                this.engine.addEventListener('message', checkReady);
-                
-                // Add error handling
-                this.engine.onerror = (error) => {
-                    console.error('Stockfish engine error:', error);
-                    reject(error);
-                };
+            const response = await fetch('http://localhost:3001/api/stockfish/move', {
+                mode: 'cors',
+                credentials: 'include',
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ fen }),
             });
+            
+            if (!response.ok) {
+                throw new Error('Failed to get move from server');
+            }
+            
+            const data = await response.json();
+            return data.move;
         } catch (error) {
-            console.error('Failed to initialize Stockfish:', error);
-            throw error;
+            console.error('Failed to get move:', error);
+            if (error.response) {
+                // Server returned an error response
+                const errorData = await error.response.json();
+                throw new Error(errorData.error || 'Server returned an error');
+            } else if (error.message) {
+                throw new Error(`Move calculation failed: ${error.message}`);
+            } else {
+                throw new Error('Move calculation failed: Network error');
+            }
         }
     }
 
@@ -56,49 +53,14 @@ class StockfishService {
         this.depth = Math.min(Math.max(depth, 1), 30);
     }
 
-    handleEngineOutput(output) {
-        if (!this.onLineCallback || !output) return;
-
-        // Parse info lines
-        if (output.startsWith('info')) {
-            const matches = {
-                depth: output.match(/depth (\d+)/),
-                score: output.match(/score (cp|mate) (-?\d+)/),
-                pv: output.match(/pv (.+)$/),
-                multipv: output.match(/multipv (\d+)/)
-            };
-
-            if (matches.depth && matches.score && matches.pv) {
-                const depth = parseInt(matches.depth[1]);
-                let evaluation;
-                
-                if (matches.score[1] === 'cp') {
-                    evaluation = parseInt(matches.score[2]) / 100;
-                } else {
-                    // Mate score
-                    const moves = parseInt(matches.score[2]);
-                    evaluation = moves > 0 ? 999 : -999;
-                }
-
-                const moves = matches.pv[1].split(' ');
-                const multipv = matches.multipv ? parseInt(matches.multipv[1]) : 1;
-
-                // Create analysis line
-                const line = {
-                    depth,
-                    evaluation,
-                    moves: this.formatPV(moves),
-                    multipv
-                };
-
-                if (multipv === 1) {
-                    // Add contextual info for main line
-                    line.info = this.getPositionInfo(evaluation);
-                }
-
-                this.onLineCallback(line);
-            }
-        }
+    getPositionInfo(evaluation) {
+        if (evaluation >= 3) return "Winning advantage";
+        if (evaluation >= 1.5) return "Clear advantage";
+        if (evaluation >= 0.5) return "Slight advantage";
+        if (evaluation > -0.5) return "Equal position";
+        if (evaluation > -1.5) return "Slight disadvantage";
+        if (evaluation > -3) return "Clear disadvantage";
+        return "Lost position";
     }
 
     formatPV(moves) {
@@ -113,39 +75,68 @@ class StockfishService {
         });
     }
 
-    getPositionInfo(evaluation) {
-        if (evaluation >= 3) return "Winning advantage";
-        if (evaluation >= 1.5) return "Clear advantage";
-        if (evaluation >= 0.5) return "Slight advantage";
-        if (evaluation > -0.5) return "Equal position";
-        if (evaluation > -1.5) return "Slight disadvantage";
-        if (evaluation > -3) return "Clear disadvantage";
-        return "Lost position";
-    }
-
-    startAnalysis(fen) {
-        if (!this.engine) return;
-        
+    async startAnalysis(fen) {
         this.currentFen = fen;
         this.isAnalyzing = true;
         
-        this.engine.postMessage('stop');
-        this.engine.postMessage('position fen ' + fen);
-        this.engine.postMessage(`go depth ${this.depth}`);
+        try {
+            const response = await fetch('http://localhost:3001/api/stockfish/analyze', {
+                mode: 'cors',
+                credentials: 'include',
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    fen,
+                    depth: this.depth 
+                }),
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to analyze position');
+            }
+            
+            const { analysisLines } = await response.json();
+            
+            // Process analysis lines
+            if (this.onLineCallback) {
+                analysisLines.forEach(line => {
+                    const formattedLine = {
+                        depth: line.depth,
+                        evaluation: line.evaluation,
+                        moves: this.formatPV(line.moves),
+                        multipv: line.multipv
+                    };
+
+                    if (line.multipv === 1) {
+                        formattedLine.info = this.getPositionInfo(line.evaluation);
+                    }
+
+                    this.onLineCallback(formattedLine);
+                });
+            }
+        } catch (error) {
+            console.error('Analysis failed:', error);
+            this.isAnalyzing = false;
+            if (error.response) {
+                // Server returned an error response
+                const errorData = await error.response.json();
+                throw new Error(errorData.error || 'Server returned an error');
+            } else if (error.message) {
+                throw new Error(`Analysis failed: ${error.message}`);
+            } else {
+                throw new Error('Analysis failed: Network error');
+            }
+        }
     }
 
     stopAnalysis() {
-        if (!this.engine) return;
-        
-        this.engine.postMessage('stop');
         this.isAnalyzing = false;
     }
 
     terminate() {
-        if (this.engine) {
-            this.engine.terminate();
-            this.engine = null;
-        }
+        // Nothing to terminate since we're using backend API
     }
 }
 

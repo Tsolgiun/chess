@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useGame } from '../../context/GameContext';
+import { useTheme } from '../../context/ThemeContext';
 import { loadSounds, playMoveSound } from '../../utils/sounds';
 
 const BoardWrapper = styled.div`
     width: min(80vw, 640px);
     margin: 0 auto;
     position: relative;
-    background: #262421;
+    background: ${({ theme }) => theme.colors.primary};
     padding: 20px;
     border-radius: 12px;
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
-    transition: all 0.3s ease;
+    transition: all 0.3s ease, background-color 0.3s ease;
     ${props => props.isDisabled && `
         pointer-events: none;
         opacity: 0.8;
@@ -26,7 +27,7 @@ const BoardWrapper = styled.div`
 const BoardGrid = styled.div`
     display: grid;
     grid-template-columns: repeat(8, 1fr);
-    border: 2px solid #2c3e50;
+    border: 2px solid ${({ theme }) => theme.colors.border};
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     aspect-ratio: 1;
     position: relative;
@@ -51,7 +52,7 @@ const Square = styled.div`
             content: '';
             position: absolute;
             inset: 0;
-            background: rgba(255, 255, 0, 0.35);
+            background: ${({ theme }) => theme.colors.moveHighlight};
             z-index: 1;
         }
     `}
@@ -187,6 +188,7 @@ const DEMO_POSITIONS = [
 
 const Board = ({ demoMode = false, analysisMode = false, position = null, boardFlipped = false }) => {
     const gameContext = useGame();
+    const theme = useTheme();
     
     const { 
         game, 

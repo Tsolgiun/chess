@@ -10,11 +10,13 @@ const Container = styled.div`
 `;
 
 const ProfileCard = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.text};
   border-radius: 12px;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
   padding: 30px;
   margin-bottom: 20px;
+  transition: background-color 0.3s ease, color 0.3s ease;
 `;
 
 const Header = styled.div`
@@ -27,14 +29,15 @@ const Header = styled.div`
 const Avatar = styled.div`
   width: 100px;
   height: 100px;
-  background: #3498db;
+  background: ${({ theme }) => theme.colors.accent};
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 36px;
-  color: white;
+  color: ${({ theme }) => theme.isDarkMode ? '#000000' : '#ffffff'};
   font-weight: bold;
+  transition: background-color 0.3s ease, color 0.3s ease;
 `;
 
 const UserInfo = styled.div`
@@ -43,14 +46,17 @@ const UserInfo = styled.div`
 
 const Username = styled.h1`
   margin: 0;
-  color: #2c3e50;
+  color: ${({ theme }) => theme.colors.text};
   font-size: 24px;
+  transition: color 0.3s ease;
 `;
 
 const UserMeta = styled.div`
-  color: #7f8c8d;
+  color: ${({ theme }) => theme.colors.text};
+  opacity: 0.7;
   font-size: 14px;
   margin-top: 5px;
+  transition: color 0.3s ease;
 `;
 
 const Stats = styled.div`
@@ -61,12 +67,12 @@ const Stats = styled.div`
 `;
 
 const StatCard = styled.div`
-  background: ${props => props.color || '#f8f9fa'};
+  background: ${props => props.color || props.theme.colors.secondary};
   padding: 20px;
   border-radius: 8px;
   text-align: center;
   color: white;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, background-color 0.3s ease;
 
   &:hover {
     transform: translateY(-5px);
@@ -88,9 +94,9 @@ const Button = styled.button`
   padding: 10px 20px;
   border: none;
   border-radius: 6px;
-  background: ${props => props.variant === 'outline' ? 'transparent' : '#3498db'};
-  color: ${props => props.variant === 'outline' ? '#3498db' : 'white'};
-  border: ${props => props.variant === 'outline' ? '2px solid #3498db' : 'none'};
+  background: ${props => props.variant === 'outline' ? 'transparent' : props.theme.colors.accent};
+  color: ${props => props.variant === 'outline' ? props.theme.colors.accent : props.theme.isDarkMode ? '#000000' : '#ffffff'};
+  border: ${props => props.variant === 'outline' ? `2px solid ${props.theme.colors.accent}` : 'none'};
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -98,10 +104,17 @@ const Button = styled.button`
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    opacity: ${props => props.variant === 'outline' ? 0.8 : 0.9};
   }
 
   &:active {
     transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
   }
 `;
 

@@ -19,6 +19,8 @@ const Container = styled.div`
     gap: 30px;
     padding: 20px;
     animation: ${slideUp} 0.5s ease-out forwards;
+    color: ${({ theme }) => theme.colors.text};
+    transition: color 0.3s ease;
 `;
 
 const Section = styled.div`
@@ -27,15 +29,16 @@ const Section = styled.div`
     align-items: center;
     gap: 20px;
     padding: 25px;
-    background: ${props => props.variant === 'primary' ? 
-        'linear-gradient(135deg, #3498db 0%, #2980b9 100%)' : 
-        'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)'};
+    background: ${({ theme }) => theme.colors.secondary};
+    color: ${({ theme }) => theme.colors.text};
     border-radius: 12px;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease, background-color 0.3s ease, color 0.3s ease;
+    border: 1px solid ${({ theme }) => theme.colors.border};
 
     &:hover {
         transform: translateY(-2px);
+        box-shadow: 0 12px 20px rgba(0, 0, 0, 0.4);
     }
 `;
 
@@ -43,23 +46,25 @@ const Button = styled.button`
     padding: ${props => props.size === 'large' ? '16px 32px' : '12px 24px'};
     font-size: ${props => props.size === 'large' ? '1.2rem' : '1rem'};
     font-weight: 600;
-    color: ${props => props.variant === 'primary' ? '#ffffff' : '#3498db'};
+    color: ${props => props.variant === 'primary' ? 
+        props.theme.colors.primary : 
+        props.theme.colors.accent};
     background: ${props => props.variant === 'primary' ?
-        'linear-gradient(135deg, #3498db 0%, #2980b9 100%)' :
-        'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)'};
-    border: none;
+        props.theme.colors.accent :
+        'transparent'};
+    border: 2px solid ${props => props.variant === 'primary' ?
+        'transparent' :
+        props.theme.colors.accent};
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
     min-width: 180px;
 
     &:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
-        background: ${props => props.variant === 'primary' ?
-            'linear-gradient(135deg, #2980b9 0%, #2475a7 100%)' :
-            'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)'};
+        box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+        opacity: 0.9;
     }
 
     &:active {
@@ -67,7 +72,10 @@ const Button = styled.button`
     }
 
     &:disabled {
-        background: #cbd5e0;
+        background: ${({ theme }) => theme.colors.border};
+        border-color: transparent;
+        color: ${({ theme }) => theme.colors.text};
+        opacity: 0.5;
         cursor: not-allowed;
         transform: none;
     }
@@ -76,28 +84,31 @@ const Button = styled.button`
 const Input = styled.input`
     padding: 12px 16px;
     font-size: 1rem;
-    border: 2px solid #e2e8f0;
+    border: 2px solid ${({ theme }) => theme.colors.border};
     border-radius: 8px;
     width: 240px;
     text-transform: uppercase;
     transition: all 0.3s ease;
-    background: white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    background: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.text};
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 
     &:focus {
         outline: none;
-        border-color: #3498db;
-        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        border-color: ${({ theme }) => theme.colors.accent};
+        box-shadow: 0 0 0 3px ${({ theme }) => `${theme.colors.accent}33`};
     }
 
     &::placeholder {
-        color: #a0aec0;
+        color: ${({ theme }) => `${theme.colors.text}99`};
     }
 `;
 
 const Status = styled.p`
     font-size: 1.1rem;
-    color: ${props => props.variant === 'success' ? '#2ecc71' : '#2c3e50'};
+    color: ${props => props.variant === 'success' ? 
+        props.theme.colors.accent : 
+        props.theme.colors.text};
     margin: 0;
     text-align: center;
     font-weight: 500;
@@ -107,12 +118,13 @@ const Status = styled.p`
 const GameId = styled.div`
     font-size: 1.8rem;
     font-weight: 700;
-    color: #2ecc71;
+    color: ${({ theme }) => theme.colors.accent};
     padding: 16px 24px;
-    background: linear-gradient(135deg, #f0fff4 0%, #dcfce7 100%);
+    background: ${({ theme }) => theme.colors.primary};
     border-radius: 8px;
     text-align: center;
-    box-shadow: 0 4px 6px rgba(46, 204, 113, 0.1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    border: 2px solid ${({ theme }) => theme.colors.border};
 `;
 
 const FormWrapper = styled.form`
@@ -129,7 +141,7 @@ const OrDivider = styled.div`
     gap: 15px;
     width: 100%;
     margin: 20px 0;
-    color: #a0aec0;
+    color: ${({ theme }) => `${theme.colors.text}99`};
     font-weight: 500;
 
     &::before,
@@ -137,7 +149,7 @@ const OrDivider = styled.div`
         content: '';
         flex: 1;
         height: 1px;
-        background: #e2e8f0;
+        background: ${({ theme }) => theme.colors.border};
     }
 `;
 

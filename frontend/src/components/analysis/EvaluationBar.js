@@ -1,47 +1,59 @@
 import React from 'react';
 import styled from 'styled-components';
+import { useTheme } from '../../context/ThemeContext';
 
 const Container = styled.div`
     position: absolute;
-    left: -30px;
-    top: 0;
-    bottom: 0;
-    width: 20px;
-    background: #e9ecef;
+    left: 0;
+    right: 0;
+    bottom: -30px;
+    height: 20px;
+    background: ${({ theme }) => theme.colors.secondary};
     border-radius: 4px;
     overflow: hidden;
+    transition: background-color 0.3s ease;
 `;
 
 const Bar = styled.div`
     position: absolute;
+    top: 0;
+    bottom: 0;
     left: 0;
     right: 0;
-    bottom: ${props => props.percentage}%;
-    height: ${props => 100 - props.percentage}%;
-    background: ${props => props.advantage === 'white' ? '#fff' : '#000'};
-    transition: all 0.3s ease;
+    background: ${({ theme }) => theme.colors.primary};
+    &:before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: ${props => props.percentage}%;
+        background: ${({ theme }) => theme.colors.accent};
+        transition: all 0.3s ease, background-color 0.3s ease;
+    }
 `;
 
 const Text = styled.div`
     position: absolute;
     left: 50%;
     top: 50%;
-    transform: translate(-50%, -50%) rotate(-90deg);
+    transform: translate(-50%, -50%);
     white-space: nowrap;
     font-size: 12px;
     font-weight: 600;
-    color: ${props => props.color};
+    color: ${({ theme }) => theme.colors.text};
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     z-index: 1;
+    transition: color 0.3s ease;
 `;
 
 const getEvaluationPercentage = (evaluation) => {
     if (evaluation >= 10) return 100;
     if (evaluation <= -10) return 0;
     
-    // Sigmoid function to convert evaluation to percentage
+    // Convert evaluation to percentage (centered at 50%)
     const sigmoid = x => 1 / (1 + Math.exp(-x/1.5));
-    return sigmoid(evaluation) * 100;
+    return 50 + (sigmoid(evaluation) - 0.5) * 100;
 };
 
 const formatEvaluation = (evaluation) => {
@@ -51,13 +63,14 @@ const formatEvaluation = (evaluation) => {
 };
 
 const EvaluationBar = ({ evaluation = 0 }) => {
+    const theme = useTheme();
     const percentage = getEvaluationPercentage(evaluation);
     const advantage = evaluation >= 0 ? 'white' : 'black';
     
     return (
         <Container>
             <Bar percentage={percentage} advantage={advantage} />
-            <Text color={Math.abs(evaluation) > 3 ? '#fff' : '#666'}>
+            <Text evaluation={evaluation}>
                 {formatEvaluation(evaluation)}
             </Text>
         </Container>

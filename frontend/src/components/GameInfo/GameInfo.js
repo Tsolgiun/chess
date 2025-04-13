@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import { useGame } from '../../context/GameContext';
+import { useTheme } from '../../context/ThemeContext';
 import GameResultModal from '../GameResultModal/GameResultModal';
 import Timer from '../Timer/Timer';
 import CapturedPieces from '../CapturedPieces/CapturedPieces';
@@ -34,10 +35,12 @@ const Container = styled.div`
     flex-direction: column;
     gap: 20px;
     padding: 24px;
-    background: #fff;
+    background: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.text};
     border-radius: 12px;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
     animation: ${fadeIn} 0.5s ease-out;
+    transition: background-color 0.3s ease, color 0.3s ease;
 
     /* Scrollbar styling */
     &::-webkit-scrollbar {
@@ -45,16 +48,16 @@ const Container = styled.div`
     }
     
     &::-webkit-scrollbar-track {
-        background: #f1f1f1;
+        background: ${({ theme }) => theme.colors.secondary};
         border-radius: 4px;
     }
     
     &::-webkit-scrollbar-thumb {
-        background: #bbb;
+        background: ${({ theme }) => theme.colors.border};
         border-radius: 4px;
         
         &:hover {
-            background: #999;
+            background: ${({ theme }) => theme.colors.accent};
         }
     }
 `;
@@ -64,61 +67,64 @@ const InfoRow = styled.div`
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background: #f8f9fa;
+    background: ${({ theme }) => theme.colors.secondary};
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    transition: all 0.2s ease;
+    transition: all 0.2s ease, background-color 0.3s ease;
 
     &:hover {
         transform: translateX(4px);
-        background: #f1f3f5;
+        background: ${({ theme }) => theme.colors.highlight};
     }
 `;
 
 const Label = styled.span`
     font-weight: 600;
-    color: #2c3e50;
+    color: ${({ theme }) => theme.colors.text};
     font-size: 0.95rem;
+    transition: color 0.3s ease;
 `;
 
 const Value = styled.span`
-    color: #3498db;
+    color: ${({ theme }) => theme.colors.accent};
     font-weight: 500;
     padding: 4px 8px;
-    background: #f8f9fa;
+    background: ${({ theme }) => theme.colors.secondary};
     border-radius: 4px;
     font-size: 0.9rem;
+    transition: color 0.3s ease, background-color 0.3s ease;
 `;
 
 const Status = styled.div`
     text-align: center;
     font-size: 1.1rem;
     font-weight: 600;
-    color: #2ecc71;
+    color: ${({ theme }) => theme.colors.accent};
     padding: 12px;
-    background: linear-gradient(135deg, #f0fff4 0%, #dcfce7 100%);
+    background: ${({ theme }) => theme.colors.highlight};
     border-radius: 8px;
     margin-top: 5px;
     animation: ${pulse} 2s infinite ease-in-out;
-    box-shadow: 0 2px 4px rgba(46, 204, 113, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: color 0.3s ease, background-color 0.3s ease;
 `;
 
 const Button = styled.button`
     padding: 10px 20px;
-    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-    color: white;
+    background: ${({ theme }) => theme.colors.accent};
+    color: ${({ theme }) => theme.isDarkMode ? '#000000' : '#ffffff'};
     border: none;
     border-radius: 6px;
     cursor: pointer;
     font-weight: 600;
     font-size: 0.9rem;
-    transition: all 0.3s ease;
+    transition: all 0.3s ease, background-color 0.3s ease, color 0.3s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
     &:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        background: linear-gradient(135deg, #2980b9 0%, #2475a7 100%);
+        opacity: 0.9;
     }
 
     &:active {
@@ -129,6 +135,7 @@ const Button = styled.button`
 
 const GameInfo = () => {
     const navigate = useNavigate();
+    const theme = useTheme();
     const {
         game,
         gameId,
@@ -207,7 +214,7 @@ const GameInfo = () => {
                         <Button 
                             onClick={resignGame}
                             style={{ 
-                                background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)'
+                                background: theme.isDarkMode ? '#c0392b' : '#e74c3c'
                             }}
                         >
                             Resign

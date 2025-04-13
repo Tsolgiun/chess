@@ -7,6 +7,7 @@ import Board from '../components/Board/Board';
 import GameInfo from '../components/GameInfo/GameInfo';
 import MoveHistory from '../components/MoveHistory/MoveHistory';
 import { useGame } from '../context/GameContext';
+import { useTheme } from '../context/ThemeContext';
 
 const Container = styled(motion.div)`
   max-width: 1400px;
@@ -25,17 +26,37 @@ const Container = styled(motion.div)`
 
 const BoardWrapper = styled(motion.div)`
   position: relative;
-  background: white;
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.text};
   border-radius: 16px;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
   padding: 30px;
+  transition: background-color 0.3s ease, color 0.3s ease;
 `;
 
 const ContentWrapper = styled(motion.div)`
-  background: white;
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.text};
   border-radius: 16px;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
   padding: 30px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+`;
+
+const StatusMessage = styled.div`
+  text-align: center;
+  grid-column: 1 / -1;
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.text};
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s ease, color 0.3s ease;
+
+  p {
+    margin-top: 10px;
+    opacity: 0.8;
+  }
 `;
 
 const Game = () => {
@@ -91,10 +112,10 @@ const Game = () => {
         exit="exit"
       >
         <NavBar />
-        <div style={{ textAlign: 'center', gridColumn: '1 / -1' }}>
+        <StatusMessage>
           {status}
           <p>Redirecting to home page...</p>
-        </div>
+        </StatusMessage>
       </Container>
     );
   }

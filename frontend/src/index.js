@@ -16,7 +16,7 @@ const GlobalStyle = createGlobalStyle`
       sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: #eceff1;
+    /* Removed hardcoded background color to allow theme-based styling to work */
   }
 `;
 

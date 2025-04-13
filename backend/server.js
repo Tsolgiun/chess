@@ -76,8 +76,8 @@ app.post('/api/auth/login', AuthController.login);
 app.get('/api/profile', auth, AuthController.getProfile);
 app.put('/api/profile', auth, AuthController.updateProfile);
 
-// Test endpoint for Stockfish
-app.post('/api/test-stockfish', async (req, res) => {
+// Move calculation endpoint for Stockfish
+app.post('/api/stockfish/move', async (req, res) => {
     const { fen } = req.body;
     
     if (!fen) {
@@ -94,6 +94,27 @@ app.post('/api/test-stockfish', async (req, res) => {
     } catch (error) {
         console.error('Stockfish error:', error);
         res.status(500).json({ error: 'Failed to calculate move: ' + error.message });
+    }
+});
+
+// Analysis endpoint for Stockfish
+app.post('/api/stockfish/analyze', async (req, res) => {
+    const { fen, depth } = req.body;
+    
+    if (!fen) {
+        return res.status(400).json({ error: 'FEN string is required' });
+    }
+
+    try {
+        if (!stockfishController.isReady) {
+            throw new Error('Stockfish engine not ready');
+        }
+        
+        const analysisLines = await stockfishController.analyze(fen, depth || 20);
+        res.json({ analysisLines });
+    } catch (error) {
+        console.error('Stockfish analysis error:', error);
+        res.status(500).json({ error: 'Failed to analyze position: ' + error.message });
     }
 });
 

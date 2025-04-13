@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { useTheme } from '../../context/ThemeContext';
 
 const TimerContainer = styled.div`
     display: flex;
@@ -13,9 +14,9 @@ const PlayerTimer = styled.div`
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background: ${props => props.isActive ? '#2c3e50' : '#f8f9fa'};
+    background: ${props => props.isActive ? ({ theme }) => theme.colors.accent : ({ theme }) => theme.colors.secondary};
     border-radius: 8px;
-    transition: all 0.3s ease;
+    transition: all 0.3s ease, background-color 0.3s ease;
 
     ${props => props.isActive && `
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -33,18 +34,20 @@ const Avatar = styled.div`
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: #ddd;
+    background: ${({ theme }) => theme.colors.primary};
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 600;
-    color: #666;
+    color: ${({ theme }) => theme.colors.text};
     font-size: 14px;
+    transition: background-color 0.3s ease, color 0.3s ease;
 `;
 
 const PlayerName = styled.span`
     font-weight: 500;
-    color: ${props => props.isActive ? '#fff' : '#333'};
+    color: ${props => props.isActive ? ({ theme }) => theme.isDarkMode ? '#000000' : '#ffffff' : ({ theme }) => theme.colors.text};
+    transition: color 0.3s ease;
 `;
 
 const Time = styled.span`
@@ -53,8 +56,9 @@ const Time = styled.span`
     font-weight: 600;
     color: ${props => {
         if (props.isLow) return '#e74c3c';
-        return props.isActive ? '#fff' : '#333';
+        return props.isActive ? ({ theme }) => theme.isDarkMode ? '#000000' : '#ffffff' : ({ theme }) => theme.colors.text;
     }};
+    transition: color 0.3s ease;
 `;
 
 const formatTime = (seconds) => {
@@ -70,6 +74,7 @@ const Timer = ({
     isWhiteTurn,
     isGameActive 
 }) => {
+    const theme = useTheme();
     const [whiteTimeLeft, setWhiteTimeLeft] = useState(whiteTime);
     const [blackTimeLeft, setBlackTimeLeft] = useState(blackTime);
 

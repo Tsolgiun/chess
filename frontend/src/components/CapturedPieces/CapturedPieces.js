@@ -1,5 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
+import { useTheme } from '../../context/ThemeContext';
 
 const Container = styled.div`
     display: flex;
@@ -12,9 +13,10 @@ const Row = styled.div`
     display: flex;
     align-items: center;
     padding: 8px 12px;
-    background: ${props => props.isLight ? '#f8f9fa' : '#edf2f7'};
+    background: ${props => props.isLight ? ({ theme }) => theme.colors.secondary : ({ theme }) => theme.colors.highlight};
     border-radius: 8px;
     min-height: 40px;
+    transition: background-color 0.3s ease;
 `;
 
 const PiecesContainer = styled.div`
@@ -42,10 +44,12 @@ const AdvantageText = styled.span`
     margin-left: auto;
     font-weight: 600;
     font-size: 0.9rem;
-    color: ${props => props.advantage > 0 ? '#27ae60' : props.advantage < 0 ? '#e74c3c' : '#666'};
+    color: ${props => props.advantage > 0 ? ({ theme }) => theme.colors.accent : props.advantage < 0 ? '#e74c3c' : ({ theme }) => theme.colors.text};
+    transition: color 0.3s ease;
 `;
 
 const CapturedPieces = ({ position }) => {
+    const theme = useTheme();
     // Calculate captured pieces from position
     const calculateCapturedPieces = () => {
         const initialPieces = {

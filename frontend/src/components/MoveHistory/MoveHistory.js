@@ -1,14 +1,17 @@
 import React from 'react';
 import styled from 'styled-components';
+import { useTheme } from '../../context/ThemeContext';
 
 const Container = styled.div`
-    background: #fafafa;
+    background: ${({ theme }) => theme.colors.secondary};
+    color: ${({ theme }) => theme.colors.text};
     border-radius: 8px;
     padding: 16px;
     height: 300px;
     overflow-y: auto;
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
     margin-bottom: 20px;
+    transition: background-color 0.3s ease, color 0.3s ease;
 
     /* Scrollbar styling */
     &::-webkit-scrollbar {
@@ -16,16 +19,16 @@ const Container = styled.div`
     }
     
     &::-webkit-scrollbar-track {
-        background: #f1f1f1;
+        background: ${({ theme }) => theme.colors.primary};
         border-radius: 4px;
     }
     
     &::-webkit-scrollbar-thumb {
-        background: #bbb;
+        background: ${({ theme }) => theme.colors.border};
         border-radius: 4px;
         
         &:hover {
-            background: #999;
+            background: ${({ theme }) => theme.colors.accent};
         }
     }
 `;
@@ -33,8 +36,9 @@ const Container = styled.div`
 const Title = styled.h3`
     margin: 0 0 12px 0;
     font-size: 1rem;
-    color: #333;
+    color: ${({ theme }) => theme.colors.text};
     font-weight: 600;
+    transition: color 0.3s ease;
 `;
 
 const MoveList = styled.div`
@@ -45,26 +49,28 @@ const MoveList = styled.div`
 `;
 
 const MoveNumber = styled.span`
-    color: #888;
+    color: ${({ theme }) => `${theme.colors.text}99`};
     font-weight: 500;
     padding-right: 8px;
+    transition: color 0.3s ease;
 `;
 
 const Move = styled.span`
     padding: 4px 8px;
     border-radius: 4px;
     cursor: pointer;
-    transition: all 0.2s ease;
-    color: #2c3e50;
+    transition: all 0.2s ease, background-color 0.3s ease, color 0.3s ease;
+    color: ${({ theme }) => theme.colors.text};
     font-weight: ${props => props.isLatest ? '600' : '400'};
-    background: ${props => props.isLatest ? 'rgba(52, 152, 219, 0.1)' : 'transparent'};
+    background: ${props => props.isLatest ? ({ theme }) => `${theme.colors.accent}33` : 'transparent'};
 
     &:hover {
-        background: rgba(52, 152, 219, 0.1);
+        background: ${({ theme }) => `${theme.colors.accent}33`};
     }
 `;
 
 const MoveHistory = ({ moves = [] }) => {
+    const theme = useTheme();
     return (
         <Container>
             <Title>Move History</Title>

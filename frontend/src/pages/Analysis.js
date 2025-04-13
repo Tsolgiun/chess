@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import StockfishService from '../services/StockfishService';
 import EvaluationBar from '../components/analysis/EvaluationBar';
 import AnalysisLines from '../components/analysis/AnalysisLines';
+import { useTheme } from '../context/ThemeContext';
 
 const PageContainer = styled.div`
     padding-top: 80px;
@@ -29,24 +30,28 @@ const Container = styled(motion.div)`
 
 const BoardWrapper = styled(motion.div)`
     position: relative;
-    background: white;
+    background: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.text};
     border-radius: 16px;
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
     padding: 30px;
+    transition: background-color 0.3s ease, color 0.3s ease;
 `;
 
 const ControlsWrapper = styled(motion.div)`
-    background: white;
+    background: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.text};
     border-radius: 16px;
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
     padding: 30px;
+    transition: background-color 0.3s ease, color 0.3s ease;
 `;
 
 const Button = styled.button`
     padding: 10px 20px;
     margin: 5px;
-    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-    color: white;
+    background: ${({ theme }) => theme.colors.accent};
+    color: ${({ theme }) => theme.isDarkMode ? '#000000' : '#ffffff'};
     border: none;
     border-radius: 6px;
     cursor: pointer;
@@ -57,6 +62,7 @@ const Button = styled.button`
     &:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        opacity: 0.9;
     }
 
     &:active {
@@ -68,21 +74,50 @@ const Input = styled.input`
     width: 100%;
     padding: 10px;
     margin: 10px 0;
-    border: 1px solid #ddd;
+    border: 1px solid ${({ theme }) => theme.colors.border};
     border-radius: 4px;
     font-size: 0.9rem;
+    background-color: ${({ theme }) => theme.colors.secondary};
+    color: ${({ theme }) => theme.colors.text};
+    transition: all 0.3s ease;
 
     &:focus {
         outline: none;
-        border-color: #3498db;
-        box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        border-color: ${({ theme }) => theme.colors.accent};
+        box-shadow: 0 0 0 2px ${({ theme }) => `${theme.colors.accent}33`};
     }
 `;
 
 const Text = styled.p`
     margin: 10px 0;
-    color: #666;
+    color: ${({ theme }) => theme.colors.text};
+    opacity: 0.8;
     font-size: 0.9rem;
+    transition: color 0.3s ease;
+`;
+
+const ErrorDiv = styled.div`
+    padding: 20px;
+    text-align: center;
+    background: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.text};
+    border-radius: 8px;
+    margin: 20px auto;
+    max-width: 600px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease, color 0.3s ease;
+`;
+
+const LoadingDiv = styled.div`
+    padding: 20px;
+    text-align: center;
+    background: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.text};
+    border-radius: 8px;
+    margin: 20px auto;
+    max-width: 600px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease, color 0.3s ease;
 `;
 
 const Analysis = () => {
@@ -179,30 +214,15 @@ const Analysis = () => {
         <PageContainer>
             <NavBar />
             {error ? (
-                <div style={{ 
-                    padding: '20px', 
-                    textAlign: 'center', 
-                    color: '#e74c3c',
-                    background: 'white',
-                    borderRadius: '8px',
-                    margin: '20px auto',
-                    maxWidth: '600px'
-                }}>
+                <ErrorDiv>
                     <h3>Error</h3>
                     <p>{error}</p>
-                </div>
+                </ErrorDiv>
             ) : !isEngineReady ? (
-                <div style={{ 
-                    padding: '20px', 
-                    textAlign: 'center',
-                    background: 'white',
-                    borderRadius: '8px',
-                    margin: '20px auto',
-                    maxWidth: '600px'
-                }}>
+                <LoadingDiv>
                     <h3>Initializing Chess Engine</h3>
                     <p>Please wait while we set up the analysis tools...</p>
-                </div>
+                </LoadingDiv>
             ) : (
                 <Container
                     variants={containerVariants}

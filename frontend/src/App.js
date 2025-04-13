@@ -1,9 +1,10 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ThemeProvider } from 'styled-components';
+import { ThemeProvider as StyledThemeProvider } from 'styled-components';
 import { GameProvider } from './context/GameContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import GlobalStyle from './styles/GlobalStyle';
 import AnalysisTheme from './styles/AnalysisTheme';
 import Home from './pages/Home';
@@ -12,6 +13,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Analysis from './pages/Analysis';
+import NavBar from './components/NavBar/NavBar';
 
 import './App.css';
 
@@ -98,19 +100,29 @@ const AnimatedRoutes = () => {
 
 function App() {
   return (
-    <ThemeProvider theme={AnalysisTheme}>
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  );
+}
+
+const AppContent = () => {
+  const theme = useTheme();
+  return (
+    <StyledThemeProvider theme={{ ...AnalysisTheme, colors: theme.colors }}>
       <GlobalStyle />
       <BrowserRouter>
         <AuthProvider>
           <GameProvider>
             <div className="App">
+              <NavBar />
               <AnimatedRoutes />
             </div>
           </GameProvider>
         </AuthProvider>
       </BrowserRouter>
-    </ThemeProvider>
+    </StyledThemeProvider>
   );
-}
+};
 
 export default App;

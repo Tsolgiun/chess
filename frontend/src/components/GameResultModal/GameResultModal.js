@@ -1,5 +1,6 @@
 import React from 'react';
 import styled, { keyframes } from 'styled-components';
+import { useTheme } from '../../context/ThemeContext';
 
 const fadeIn = keyframes`
   from {
@@ -38,7 +39,8 @@ const ModalContainer = styled.div`
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: white;
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.text};
   padding: 30px;
   border-radius: 12px;
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
@@ -46,29 +48,31 @@ const ModalContainer = styled.div`
   min-width: 300px;
   animation: ${slideIn} 0.3s ease-out;
   z-index: 1001;
+  transition: background-color 0.3s ease, color 0.3s ease;
 `;
 
 const ResultText = styled.h2`
-  color: #2c3e50;
+  color: ${({ theme }) => theme.colors.text};
   margin-bottom: 20px;
   font-size: 1.5rem;
+  transition: color 0.3s ease;
 `;
 
 const Button = styled.button`
   padding: 10px 20px;
-  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-  color: white;
+  background: ${({ theme }) => theme.colors.accent};
+  color: ${({ theme }) => theme.isDarkMode ? '#000000' : '#ffffff'};
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
   font-size: 1rem;
-  transition: all 0.3s ease;
+  transition: all 0.3s ease, background-color 0.3s ease, color 0.3s ease;
   
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    background: linear-gradient(135deg, #2980b9 0%, #2475a7 100%);
+    opacity: 0.9;
   }
 
   &:active {
@@ -78,6 +82,7 @@ const Button = styled.button`
 `;
 
 const GameResultModal = ({ show, result, onNewGame }) => {
+  const theme = useTheme();
   if (!show) return null;
 
   return (

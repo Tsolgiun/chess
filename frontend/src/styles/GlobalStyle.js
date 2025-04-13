@@ -10,17 +10,18 @@ const GlobalStyle = createGlobalStyle`
 
   body {
     font-family: ${AnalysisTheme.typography.fontFamily.primary};
-    background-color: #2f3542;
-    color: ${AnalysisTheme.colors.text.primary};
+    background-color: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.text};
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-weight: ${AnalysisTheme.typography.fontWeight.bold};
     margin-bottom: ${AnalysisTheme.spacing.medium};
-    color: ${AnalysisTheme.colors.primaryDark};
+    color: ${({ theme }) => theme.colors.text};
   }
 
   h1 { font-size: 2.5rem; }
@@ -49,15 +50,24 @@ const GlobalStyle = createGlobalStyle`
   input, select, textarea {
     font-family: inherit;
     font-size: inherit;
+    color: ${({ theme }) => theme.colors.text};
+    background-color: ${({ theme }) => theme.colors.secondary};
+    border: 1px solid ${({ theme }) => theme.colors.border};
+    transition: all 0.3s ease;
+
+    &:focus {
+      outline: none;
+      border-color: ${({ theme }) => theme.colors.accent};
+    }
   }
 
   a {
     text-decoration: none;
-    color: ${AnalysisTheme.colors.primary};
+    color: ${({ theme }) => theme.colors.accent};
     transition: ${AnalysisTheme.transitions.fast};
 
     &:hover {
-      color: ${AnalysisTheme.colors.primaryDark};
+      opacity: 0.8;
     }
   }
 
@@ -68,15 +78,15 @@ const GlobalStyle = createGlobalStyle`
   }
 
   ::-webkit-scrollbar-track {
-    background: ${AnalysisTheme.colors.lightBg};
+    background: ${({ theme }) => theme.colors.secondary};
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #888;
+    background: ${({ theme }) => theme.colors.border};
     border-radius: 4px;
 
     &:hover {
-      background: #666;
+      background: ${({ theme }) => theme.colors.accent};
     }
   }
 
