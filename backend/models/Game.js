@@ -38,6 +38,30 @@ const gameSchema = new mongoose.Schema({
         type: String,
         enum: ['white', 'black', 'draw', null],
         default: null
+    },
+    timeControl: {
+        initialTime: {
+            type: Number,
+            default: 600 // 10 minutes in seconds
+        },
+        increment: {
+            type: Number,
+            default: 0 // No increment by default
+        }
+    },
+    timeRemaining: {
+        white: {
+            type: Number,
+            default: 600 // 10 minutes in seconds
+        },
+        black: {
+            type: Number,
+            default: 600 // 10 minutes in seconds
+        }
+    },
+    lastMoveTime: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true

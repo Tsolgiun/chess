@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import NavBar from '../components/NavBar/NavBar';
@@ -62,16 +62,8 @@ const StatusMessage = styled.div`
 const Game = () => {
   const { gameId } = useParams();
   const navigate = useNavigate();
-  const { joinGame, isGameActive, status, game } = useGame();
-  const [moves, setMoves] = useState([]);
-
-  // Track moves
-  useEffect(() => {
-    if (game) {
-      const history = game.history();
-      setMoves(history);
-    }
-  }, [game]);
+  const theme = useTheme();
+  const { joinGame, isGameActive, status, moves } = useGame();
 
   useEffect(() => {
     if (gameId && !isGameActive) {

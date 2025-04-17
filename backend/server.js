@@ -121,6 +121,12 @@ app.post('/api/stockfish/analyze', async (req, res) => {
 // In-memory cache for active games
 const games = {};
 
+// Timer update interval (milliseconds)
+const TIMER_UPDATE_INTERVAL = 1000;
+
+// Timer intervals for each game
+const timerIntervals = {};
+
 // Cleanup old games periodically (every hour)
 setInterval(async () => {
     try {
@@ -139,6 +145,75 @@ function generateGameId() {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
+// Start a timer for a game
+function startGameTimer(gameId) {
+    // Clear any existing interval
+    if (timerIntervals[gameId]) {
+        clearInterval(timerIntervals[gameId]);
+    }
+    
+    timerIntervals[gameId] = setInterval(async () => {
+        try {
+            // Get the game from database
+            const dbGame = await Game.findOne({ gameId });
+            if (!dbGame || dbGame.status !== 'active') {
+                clearInterval(timerIntervals[gameId]);
+                delete timerIntervals[gameId];
+                return;
+            }
+            
+            // Get the current turn
+            const currentTurn = games[gameId]?.chess.turn();
+            if (!currentTurn) return;
+            
+            const colorToUpdate = currentTurn === 'w' ? 'white' : 'black';
+            
+            // Update time remaining
+            const timeRemaining = dbGame.timeRemaining[colorToUpdate] - 1;
+            
+            // Check for timeout
+            if (timeRemaining <= 0) {
+                // Game over by timeout
+                clearInterval(timerIntervals[gameId]);
+                delete timerIntervals[gameId];
+                
+                const winner = colorToUpdate === 'white' ? 'black' : 'white';
+                await Game.findOneAndUpdate(
+                    { gameId },
+                    { 
+                        $set: { 
+                            status: 'completed',
+                            winner,
+                            [`timeRemaining.${colorToUpdate}`]: 0
+                        }
+                    }
+                );
+                
+                io.to(gameId).emit('gameOver', { 
+                    result: `Game Over - ${winner === 'white' ? 'White' : 'Black'} wins on time`
+                });
+                
+                return;
+            }
+            
+            // Update time in database
+            await Game.findOneAndUpdate(
+                { gameId },
+                { $set: { [`timeRemaining.${colorToUpdate}`]: timeRemaining } }
+            );
+            
+            // Broadcast time update
+            io.to(gameId).emit('timeUpdate', {
+                white: colorToUpdate === 'white' ? timeRemaining : dbGame.timeRemaining.white,
+                black: colorToUpdate === 'black' ? timeRemaining : dbGame.timeRemaining.black
+            });
+            
+        } catch (error) {
+            console.error('Timer update error:', error);
+        }
+    }, TIMER_UPDATE_INTERVAL);
+}
+
 // Socket.io connection handling
 io.on('connection', (socket) => {
     console.log('New client connected:', socket.id);
@@ -150,10 +225,14 @@ io.on('connection', (socket) => {
     });
 
     // Create a new game
-    socket.on('createGame', async () => {
+    socket.on('createGame', async (data = {}) => {
         try {
             const gameId = generateGameId();
             const chess = new Chess();
+            
+            // Get time control settings (or use defaults)
+            const initialTime = data.initialTime || 600; // 10 minutes in seconds
+            const increment = data.increment || 0;
             
             // Create game in database
             const game = await Game.create({
@@ -164,7 +243,15 @@ io.on('connection', (socket) => {
                     color: 'white',
                     platform: socket.data.platform || 'unknown'
                 }],
-                status: 'waiting'
+                status: 'waiting',
+                timeControl: {
+                    initialTime,
+                    increment
+                },
+                timeRemaining: {
+                    white: initialTime,
+                    black: initialTime
+                }
             });
             
             // Cache game in memory
@@ -182,7 +269,15 @@ io.on('connection', (socket) => {
             socket.emit('gameCreated', { 
                 gameId, 
                 color: 'white',
-                platform: socket.data.platform || 'unknown'
+                platform: socket.data.platform || 'unknown',
+                timeControl: {
+                    initialTime,
+                    increment
+                },
+                timeRemaining: {
+                    white: initialTime,
+                    black: initialTime
+                }
             });
         } catch (error) {
             console.error('Create game error:', error);
@@ -236,16 +331,48 @@ io.on('connection', (socket) => {
             // Get opponent's platform
             const opponent = dbGame.players.find(p => p.socketId !== socket.id);
             
+            // Get time control information
+            const timeControl = dbGame.timeControl;
+            const timeRemaining = dbGame.timeRemaining;
+            
+            // Get move history if available
+            let moveHistory = [];
+            try {
+                // Create a temporary game to get the move history
+                const tempGame = new Chess();
+                const currentFen = games[gameId].chess.fen();
+                
+                // Try to reconstruct the move history
+                // This is a simplified approach and may not work for all positions
+                // Ideally, we would store the move history in the database
+                const pgn = games[gameId].chess.pgn();
+                if (pgn) {
+                    tempGame.loadPgn(pgn);
+                    moveHistory = tempGame.history();
+                }
+            } catch (error) {
+                console.error('Failed to get move history:', error);
+            }
+            
             socket.emit('gameJoined', { 
                 gameId, 
                 color: 'black',
                 fen: games[gameId].chess.fen(),
-                opponentPlatform: opponent?.platform || 'unknown'
+                opponentPlatform: opponent?.platform || 'unknown',
+                timeControl,
+                timeRemaining,
+                moveHistory
             });
             
             socket.to(gameId).emit('opponentJoined', {
                 platform: socket.data.platform || 'unknown'
             });
+            
+            // Start the game timer
+            startGameTimer(gameId);
+            
+            // Send initial time update to both players
+            io.to(gameId).emit('timeUpdate', timeRemaining);
         } catch (error) {
             console.error('Join game error:', error);
             socket.emit('error', { message: 'Failed to join game' });
@@ -280,25 +407,52 @@ io.on('connection', (socket) => {
 
             if (move) {
                 try {
-                    // Update database with new position
-                    const fen = game.fen();
+                    // Get the game from database
+                    const dbGame = await Game.findOne({ gameId });
+                    if (!dbGame) {
+                        socket.emit('error', { message: 'Game not found in database' });
+                        return;
+                    }
+                    
+                    // Handle time increment if applicable
+                    const increment = dbGame.timeControl.increment || 0;
+                    const playerTimeField = `timeRemaining.${playerColor}`;
+                    let updateFields = {
+                        fen: game.fen(),
+                        lastActivity: new Date(),
+                        lastMoveTime: new Date()
+                    };
+                    
+                    // Add increment to player's time if increment is set
+                    if (increment > 0) {
+                        updateFields[playerTimeField] = dbGame.timeRemaining[playerColor] + increment;
+                    }
+                    
+                    // Update database with new position and time
                     await Game.findOneAndUpdate(
                         { gameId },
-                        { 
-                            $set: { 
-                                fen,
-                                lastActivity: new Date()
-                            }
-                        }
+                        { $set: updateFields }
                     );
+                    
+                    // Get updated time remaining
+                    const updatedGame = await Game.findOne({ gameId });
+                    const timeRemaining = updatedGame.timeRemaining;
 
+                    // Get the move in SAN format
+                    const moveNotation = move.san;
+                    
                     // Broadcast the move
                     io.to(gameId).emit('moveMade', {
                         from: data.from,
                         to: data.to,
                         promotion: data.promotion,
-                        fen: fen
+                        fen: game.fen(),
+                        timeRemaining,
+                        moveNotation
                     });
+                    
+                    // Send time update
+                    io.to(gameId).emit('timeUpdate', timeRemaining);
                     
                     // Check for game over conditions
                     if (game.isGameOver()) {

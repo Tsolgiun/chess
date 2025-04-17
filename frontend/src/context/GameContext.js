@@ -22,6 +22,9 @@ export const GameProvider = ({ children }) => {
     const [drawOffered, setDrawOffered] = useState(false);
     const [drawOfferFrom, setDrawOfferFrom] = useState(null);
     const [opponentPlatform, setOpponentPlatform] = useState(null);
+    const [timeControl, setTimeControl] = useState({ initialTime: 600, increment: 0 });
+    const [timeRemaining, setTimeRemaining] = useState({ white: 600, black: 600 });
+    const [moves, setMoves] = useState([]); // Track all moves
 
     // Utility functions
     const updateStatus = useCallback((currentGame) => {
@@ -94,6 +97,10 @@ export const GameProvider = ({ children }) => {
                     console.log('AI move applied:', moveResult);
                     setGame(newGame);
                     setLastMove({ from, to });
+                    
+                    // Add the AI move to the moves array
+                    const moveNotation = moveResult.san; // Standard Algebraic Notation
+                    setMoves(prevMoves => [...prevMoves, moveNotation]);
 
                     // Check for game ending conditions
                     if (newGame.isGameOver()) {
@@ -131,6 +138,11 @@ export const GameProvider = ({ children }) => {
         if (result) {
             setGame(newGame);
             setLastMove({ from: move.from, to: move.to });
+            
+            // Add the move to the moves array
+            const moveNotation = result.san; // Standard Algebraic Notation
+            setMoves(prevMoves => [...prevMoves, moveNotation]);
+            
             updateStatus(newGame);
 
             if (!isAIGame && socket) {
@@ -157,6 +169,9 @@ export const GameProvider = ({ children }) => {
         setDrawOffered(false);
         setDrawOfferFrom(null);
         setOpponentPlatform(null);
+        setTimeControl({ initialTime: 600, increment: 0 });
+        setTimeRemaining({ white: 600, black: 600 });
+        setMoves([]); // Reset moves history
         setStatus('Welcome to Online Chess!');
     }, []);
 
@@ -220,16 +235,26 @@ export const GameProvider = ({ children }) => {
     useEffect(() => {
         if (!socket) return;
 
-        socket.on('gameCreated', ({ gameId, color }) => {
+        socket.on('gameCreated', ({ gameId, color, timeControl, timeRemaining }) => {
             setGameId(gameId);
             setPlayerColor(color);
             setIsGameActive(true);
             setStatus('Waiting for an opponent to join...');
             const newGame = new Chess();
             setGame(newGame);
+            
+            // Set time control if provided
+            if (timeControl) {
+                setTimeControl(timeControl);
+            }
+            
+            // Set initial time remaining if provided
+            if (timeRemaining) {
+                setTimeRemaining(timeRemaining);
+            }
         });
 
-        socket.on('gameJoined', ({ gameId, color, fen, opponentPlatform }) => {
+        socket.on('gameJoined', ({ gameId, color, fen, opponentPlatform, timeControl, timeRemaining, moveHistory }) => {
             setGameId(gameId);
             setPlayerColor(color);
             setIsGameActive(true);
@@ -238,9 +263,50 @@ export const GameProvider = ({ children }) => {
             if (fen) {
                 const newGame = new Chess(fen);
                 setGame(newGame);
+                
+                // If we have a move history from the server, use it
+                if (moveHistory && Array.isArray(moveHistory)) {
+                    setMoves(moveHistory);
+                } else {
+                    // Otherwise, try to reconstruct the move history from the current position
+                    // This is a best-effort approach and may not be accurate for all positions
+                    try {
+                        // Create a temporary game to get the move history
+                        const tempGame = new Chess();
+                        const history = [];
+                        
+                        // Try to replay the moves to get to the current position
+                        // This is a simplified approach and may not work for all positions
+                        const pgn = newGame.pgn();
+                        if (pgn) {
+                            tempGame.loadPgn(pgn);
+                            const moveHistory = tempGame.history();
+                            setMoves(moveHistory);
+                        }
+                    } catch (error) {
+                        console.error('Failed to reconstruct move history:', error);
+                    }
+                }
             }
             if (color === 'black') {
                 setBoardFlipped(true);
+            }
+            
+            // Set time control if provided
+            if (timeControl) {
+                setTimeControl(timeControl);
+            }
+            
+            // Set initial time remaining if provided
+            if (timeRemaining) {
+                setTimeRemaining(timeRemaining);
+            }
+        });
+        
+        // Handle time updates from server
+        socket.on('timeUpdate', (times) => {
+            if (times && times.white !== undefined && times.black !== undefined) {
+                setTimeRemaining(times);
             }
         });
 
@@ -249,10 +315,40 @@ export const GameProvider = ({ children }) => {
             setOpponentPlatform(platform);
         });
 
-        socket.on('moveMade', ({ from, to, promotion, fen }) => {
+        socket.on('moveMade', ({ from, to, promotion, fen, moveNotation }) => {
+            // Update the game with the new FEN
             const newGame = new Chess(fen);
             setGame(newGame);
             setLastMove({ from, to });
+            
+            // Get the move notation
+            let notation = moveNotation;
+            if (!notation) {
+                // Fallback if moveNotation is not provided
+                try {
+                    const tempGame = new Chess(game.fen());
+                    const moveResult = tempGame.move({ from, to, promotion });
+                    if (moveResult) {
+                        notation = moveResult.san;
+                    }
+                } catch (error) {
+                    console.error('Error getting move notation:', error);
+                }
+            }
+            
+            // Add the move to the moves array if it's not already there
+            if (notation) {
+                setMoves(prevMoves => {
+                    // Check if this is a new move (not already in the array)
+                    // This prevents duplicate moves when the server sends back our own move
+                    const lastMove = prevMoves.length > 0 ? prevMoves[prevMoves.length - 1] : null;
+                    if (lastMove !== notation) {
+                        return [...prevMoves, notation];
+                    }
+                    return prevMoves;
+                });
+            }
+            
             updateStatus(newGame);
         });
 
@@ -294,6 +390,7 @@ export const GameProvider = ({ children }) => {
                 socket.off('opponentDisconnected');
                 socket.off('drawOffered');
                 socket.off('drawDeclined');
+                socket.off('timeUpdate');
             }
         };
     }, [socket, updateStatus]);
@@ -370,7 +467,14 @@ export const GameProvider = ({ children }) => {
 
         // Draw offer state
         drawOffered,
-        drawOfferFrom
+        drawOfferFrom,
+        
+        // Time control
+        timeControl,
+        timeRemaining,
+        
+        // Move history
+        moves
     };
 
     return (

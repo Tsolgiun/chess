@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import styled from 'styled-components';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -62,7 +62,7 @@ const Time = styled.span`
 `;
 
 const formatTime = (seconds) => {
-    if (seconds < 0) return '0:00';
+    if (seconds === undefined || seconds < 0) return '0:00';
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
@@ -75,26 +75,6 @@ const Timer = ({
     isGameActive 
 }) => {
     const theme = useTheme();
-    const [whiteTimeLeft, setWhiteTimeLeft] = useState(whiteTime);
-    const [blackTimeLeft, setBlackTimeLeft] = useState(blackTime);
-
-    useEffect(() => {
-        let interval;
-        
-        if (isGameActive) {
-            interval = setInterval(() => {
-                if (isWhiteTurn) {
-                    setWhiteTimeLeft(prev => Math.max(0, prev - 1));
-                } else {
-                    setBlackTimeLeft(prev => Math.max(0, prev - 1));
-                }
-            }, 1000);
-        }
-
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, [isGameActive, isWhiteTurn]);
 
     return (
         <TimerContainer>
@@ -105,9 +85,9 @@ const Timer = ({
                 </PlayerInfo>
                 <Time 
                     isActive={!isWhiteTurn} 
-                    isLow={blackTimeLeft < 30}
+                    isLow={blackTime < 30}
                 >
-                    {formatTime(blackTimeLeft)}
+                    {formatTime(blackTime)}
                 </Time>
             </PlayerTimer>
             
@@ -118,9 +98,9 @@ const Timer = ({
                 </PlayerInfo>
                 <Time 
                     isActive={isWhiteTurn} 
-                    isLow={whiteTimeLeft < 30}
+                    isLow={whiteTime < 30}
                 >
-                    {formatTime(whiteTimeLeft)}
+                    {formatTime(whiteTime)}
                 </Time>
             </PlayerTimer>
         </TimerContainer>

@@ -153,7 +153,8 @@ const GameInfo = () => {
         drawOffered,
         drawOfferFrom,
         isAIGame,
-        opponentPlatform
+        opponentPlatform,
+        timeRemaining
     } = useGame();
 
     const handleNewGame = () => {
@@ -168,6 +169,8 @@ const GameInfo = () => {
     return (
         <Container>
             <Timer 
+                whiteTime={timeRemaining.white}
+                blackTime={timeRemaining.black}
                 isWhiteTurn={game.turn() === 'w'}
                 isGameActive={isGameActive}
             />
