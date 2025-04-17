@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import NavBar from '../components/NavBar/NavBar';
@@ -10,6 +10,7 @@ import CapturedPieces from '../components/CapturedPieces/CapturedPieces';
 import Timer from '../components/Timer/Timer';
 import EvaluationBar from '../components/analysis/EvaluationBar';
 import AnalysisLines from '../components/analysis/AnalysisLines';
+import GameResultModal from '../components/GameResultModal/GameResultModal';
 import { useGame } from '../context/GameContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -170,6 +171,7 @@ const Game = () => {
   const [showAnalysis, setShowAnalysis] = useState(false);
   
   const { 
+    socket,
     joinGame, 
     isGameActive, 
     status, 
@@ -188,8 +190,49 @@ const Game = () => {
     drawOffered,
     drawOfferFrom,
     isAIGame,
-    gameOver
+    gameOver,
+    gameResult,
+    setGameForReview
   } = useGame();
+  
+  const handleNewGame = useCallback(() => {
+    resetGameState();
+    navigate('/');
+  }, [resetGameState, navigate]);
+
+  const handleFlipBoard = useCallback(() => {
+    setBoardFlipped(!boardFlipped);
+  }, [setBoardFlipped, boardFlipped]);
+  
+  const handleReview = useCallback(() => {
+    console.log("Review button clicked");
+    
+    try {
+      // Generate a unique ID for AI games or use the existing gameId
+      const reviewId = isAIGame ? `AI-${Date.now()}` : gameId;
+      
+      // Request review through socket for online games
+      if (socket && !isAIGame) {
+        console.log("Requesting review through socket");
+        socket.emit('requestReview', { gameId: reviewId });
+      }
+      
+      // Store the current game and moves for review
+      const success = setGameForReview(game, moves, reviewId);
+      
+      if (success) {
+        console.log(`Navigating to review page with ID: ${reviewId}`);
+        // Navigate to the review page
+        navigate(`/review/${reviewId}`);
+      } else {
+        console.error("Failed to save game for review");
+        alert("Failed to prepare game for review. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error in review process:", error);
+      alert("An error occurred while preparing the review. Please try again.");
+    }
+  }, [game, moves, gameId, navigate, setGameForReview, socket, isAIGame]);
 
   useEffect(() => {
     if (routeGameId && !isGameActive) {
@@ -238,15 +281,6 @@ const Game = () => {
     );
   }
 
-  const handleNewGame = () => {
-    resetGameState();
-    navigate('/');
-  };
-
-  const handleFlipBoard = () => {
-    setBoardFlipped(!boardFlipped);
-  };
-
   return (
     <Container
       variants={containerVariants}
@@ -255,6 +289,12 @@ const Game = () => {
       exit="exit"
     >
       <NavBar />
+      <GameResultModal 
+        show={gameOver} 
+        result={gameResult} 
+        onNewGame={handleNewGame}
+        onReview={handleReview}
+      />
       <BoardWrapper>
         <Board />
         {showAnalysis && <EvaluationBar evaluation={0} depth={15} nodes={150000} />}
@@ -267,6 +307,9 @@ const Game = () => {
             </ControlButton>
             <ControlButton onClick={() => setShowAnalysis(!showAnalysis)}>
               {showAnalysis ? 'Hide Analysis' : 'Show Analysis'}
+            </ControlButton>
+            <ControlButton onClick={handleReview}>
+              Review Game
             </ControlButton>
           </ControlButtonGroup>
           
@@ -331,7 +374,15 @@ const Game = () => {
         
         <TabContent active={activeTab === 'moves'}>
           <CapturedPieces position={game.fen()} />
-          <MoveHistory moves={moves} />
+          <MoveHistory 
+            moves={moves}
+            selectedMoveIndex={-1}
+            onMoveClick={() => {}}
+            onFirstMove={() => {}}
+            onPreviousMove={() => {}}
+            onNextMove={() => {}}
+            onLastMove={() => {}}
+          />
         </TabContent>
         
         <TabContent active={activeTab === 'analysis'}>

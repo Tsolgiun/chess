@@ -60,9 +60,9 @@ const ResultText = styled.h2`
 
 const Button = styled.button`
   padding: 10px 20px;
-  background: ${({ theme }) => theme.colors.accent};
-  color: ${({ theme }) => theme.isDarkMode ? '#000000' : '#ffffff'};
-  border: none;
+  background: ${props => props.secondary ? 'transparent' : ({ theme }) => theme.colors.accent};
+  color: ${props => props.secondary ? ({ theme }) => theme.colors.accent : ({ theme }) => theme.isDarkMode ? '#000000' : '#ffffff'};
+  border: ${props => props.secondary ? `1px solid ${({ theme }) => theme.colors.accent}` : 'none'};
   border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
@@ -81,15 +81,49 @@ const Button = styled.button`
   }
 `;
 
-const GameResultModal = ({ show, result, onNewGame }) => {
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+`;
+
+const GameResultModal = ({ show, result, onNewGame, onReview }) => {
   const theme = useTheme();
   if (!show) return null;
+
+  const handleReviewClick = (e) => {
+    console.log("Review button clicked in GameResultModal");
+    // Prevent event propagation issues
+    e.stopPropagation();
+    // Call the onReview function
+    if (typeof onReview === 'function') {
+      onReview();
+    } else {
+      console.error("onReview is not a function:", onReview);
+    }
+  };
+
+  const handleNewGameClick = (e) => {
+    console.log("New Game button clicked in GameResultModal");
+    // Prevent event propagation issues
+    e.stopPropagation();
+    // Call the onNewGame function
+    if (typeof onNewGame === 'function') {
+      onNewGame();
+    } else {
+      console.error("onNewGame is not a function:", onNewGame);
+    }
+  };
 
   return (
     <Overlay show={show}>
       <ModalContainer>
         <ResultText>{result}</ResultText>
-        <Button onClick={onNewGame}>New Game</Button>
+        <ButtonGroup>
+          <Button onClick={handleReviewClick}>Review</Button>
+          <Button secondary onClick={handleNewGameClick}>New Game</Button>
+        </ButtonGroup>
       </ModalContainer>
     </Overlay>
   );

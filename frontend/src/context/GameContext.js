@@ -25,6 +25,11 @@ export const GameProvider = ({ children }) => {
     const [timeControl, setTimeControl] = useState({ initialTime: 600, increment: 0 });
     const [timeRemaining, setTimeRemaining] = useState({ white: 600, black: 600 });
     const [moves, setMoves] = useState([]); // Track all moves
+    
+    // Review mode state
+    const [reviewFen, setReviewFen] = useState(null);
+    const [reviewMoves, setReviewMoves] = useState([]);
+    const [reviewGameId, setReviewGameId] = useState(null);
 
     // Utility functions
     const updateStatus = useCallback((currentGame) => {
@@ -253,6 +258,12 @@ export const GameProvider = ({ children }) => {
                 setTimeRemaining(timeRemaining);
             }
         });
+        
+        // Handle review availability notification
+        socket.on('reviewAvailable', ({ gameId, reviewUrl }) => {
+            console.log(`Review available for game ${gameId} at ${reviewUrl}`);
+            // We could store this information if needed
+        });
 
         socket.on('gameJoined', ({ gameId, color, fen, opponentPlatform, timeControl, timeRemaining, moveHistory }) => {
             setGameId(gameId);
@@ -474,7 +485,47 @@ export const GameProvider = ({ children }) => {
         timeRemaining,
         
         // Move history
-        moves
+        moves,
+        
+        // Review mode
+        reviewFen,
+        reviewMoves,
+        reviewGameId,
+        setGameForReview: useCallback((gameToReview, movesToReview, currentGameId) => {
+            try {
+                // Validate game object
+                if (!gameToReview) {
+                    console.error("Invalid game object for review");
+                    return false;
+                }
+                
+                // Ensure moves is an array (empty array is acceptable)
+                const validMoves = Array.isArray(movesToReview) ? movesToReview : [];
+                
+                // Get FEN string from game object
+                const fen = gameToReview.fen();
+                if (!fen) {
+                    console.error("Could not get FEN from game object");
+                    return false;
+                }
+                
+                // Store review data in context
+                setReviewFen(fen);
+                setReviewMoves(validMoves);
+                setReviewGameId(currentGameId);
+                
+                console.log("Game successfully saved for review:", {
+                    fen,
+                    moves: validMoves,
+                    gameId: currentGameId
+                });
+                
+                return true;
+            } catch (error) {
+                console.error("Error saving game for review:", error);
+                return false;
+            }
+        }, [])
     };
 
     return (

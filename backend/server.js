@@ -118,6 +118,59 @@ app.post('/api/stockfish/analyze', async (req, res) => {
     }
 });
 
+// Game review endpoint
+app.get('/api/games/:gameId/review', async (req, res) => {
+    try {
+        const { gameId } = req.params;
+        
+        console.log(`Review requested for game: ${gameId}`);
+        
+        // Find the game in the database
+        const game = await Game.findOne({ gameId });
+        
+        if (!game) {
+            console.log(`Game not found: ${gameId}`);
+            return res.status(404).json({ error: 'Game not found' });
+        }
+        
+        // Get the game state from memory if available
+        const memoryGame = games[gameId] ? games[gameId].chess : null;
+        
+        // Reconstruct move history
+        let moveHistory = [];
+        if (memoryGame) {
+            try {
+                const pgn = memoryGame.pgn();
+                if (pgn) {
+                    const { Chess } = require('chess.js');
+                    const tempGame = new Chess();
+                    tempGame.loadPgn(pgn);
+                    moveHistory = tempGame.history();
+                }
+            } catch (error) {
+                console.error('Failed to get move history:', error);
+            }
+        }
+        
+        console.log(`Returning review data for game ${gameId} with ${moveHistory.length} moves`);
+        
+        // Return game data for review
+        res.json({
+            gameId: game.gameId,
+            fen: game.fen,
+            status: game.status,
+            winner: game.winner,
+            players: game.players,
+            moveHistory,
+            timeControl: game.timeControl,
+            timeRemaining: game.timeRemaining
+        });
+    } catch (error) {
+        console.error('Game review error:', error);
+        res.status(500).json({ error: 'Failed to retrieve game for review' });
+    }
+});
+
 // In-memory cache for active games
 const games = {};
 
@@ -636,6 +689,40 @@ io.on('connection', (socket) => {
     // Handle stop engine requests
     socket.on('stopEngine', () => {
         stockfishController.stop();
+    });
+    
+    // Handle review request
+    socket.on('requestReview', async (data) => {
+        const gameId = socket.data.gameId || data.gameId;
+        
+        if (!gameId) {
+            socket.emit('error', { message: 'Game not found' });
+            return;
+        }
+        
+        try {
+            console.log(`Review requested for game ${gameId} by ${socket.data.color || 'unknown'} player`);
+            
+            // Find the game in the database
+            const game = await Game.findOne({ gameId });
+            
+            if (!game) {
+                socket.emit('error', { message: 'Game not found' });
+                return;
+            }
+            
+            // Notify all players in the game room that a review is available
+            io.to(gameId).emit('reviewAvailable', { 
+                gameId,
+                reviewUrl: `/review/${gameId}`
+            });
+            
+            console.log(`Review notification sent to all players in game ${gameId}`);
+            
+        } catch (error) {
+            console.error('Review request error:', error);
+            socket.emit('error', { message: 'Failed to request game review' });
+        }
     });
 
     socket.on('disconnect', async () => {

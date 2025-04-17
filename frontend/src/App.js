@@ -13,6 +13,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Analysis from './pages/Analysis';
+import Review from './pages/Review';
 import NavBar from './components/NavBar/NavBar';
 
 import './App.css';
@@ -91,6 +92,7 @@ const AnimatedRoutes = () => {
             </PrivateRoute>
           } />
           <Route path="/analysis" element={<Analysis />} />
+          <Route path="/review/:reviewGameId" element={<Review />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </motion.div>

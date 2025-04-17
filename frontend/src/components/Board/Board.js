@@ -186,7 +186,7 @@ const DEMO_POSITIONS = [
     }
 ];
 
-const Board = ({ demoMode = false, analysisMode = false, position = null, boardFlipped = false }) => {
+const Board = ({ demoMode = false, analysisMode = false, position = null, boardFlipped = false, onBoardFlip }) => {
     const gameContext = useGame();
     const theme = useTheme();
     
@@ -209,7 +209,22 @@ const Board = ({ demoMode = false, analysisMode = false, position = null, boardF
     } : gameContext;
 
     // Use local state for analysis mode board flipping
-    const [localBoardFlipped, setLocalBoardFlipped] = useState(false);
+    const [localBoardFlipped, setLocalBoardFlipped] = useState(boardFlipped);
+    
+    // Update localBoardFlipped when boardFlipped prop changes
+    useEffect(() => {
+        setLocalBoardFlipped(boardFlipped);
+    }, [boardFlipped]);
+    
+    // Function to handle board flipping
+    const handleBoardFlip = (flipped) => {
+        setLocalBoardFlipped(flipped);
+        // Notify parent component if onBoardFlip is provided
+        if (onBoardFlip) {
+            onBoardFlip(flipped);
+        }
+    };
+    
     const effectiveBoardFlipped = analysisMode ? localBoardFlipped : boardFlipped;
     
     const [selectedSquare, setSelectedSquare] = useState(null);
@@ -363,8 +378,8 @@ const Board = ({ demoMode = false, analysisMode = false, position = null, boardF
     };
 
     // Determine board orientation
-    const boardFiles = boardFlipped ? [...FILES].reverse() : FILES;
-    const boardRanks = boardFlipped ? RANKS : [...RANKS].reverse();
+    const boardFiles = effectiveBoardFlipped ? [...FILES].reverse() : FILES;
+    const boardRanks = effectiveBoardFlipped ? RANKS : [...RANKS].reverse();
 
     return (
         <BoardWrapper isDisabled={demoMode}>
@@ -375,7 +390,9 @@ const Board = ({ demoMode = false, analysisMode = false, position = null, boardF
                         const piece = game.get(square);
                         const fileIndex = FILES.indexOf(file);
                         const rankIndex = RANKS.indexOf(rank);
-                        const isLight = (fileIndex + rankIndex) % 2 === (playerColor === 'white' ? 0 : 1);
+                        // In standard chess, a1 is always dark (black)
+                        // This ensures consistent coloring regardless of player color
+                        const isLight = (fileIndex + rankIndex) % 2 === 1;
                         const pieceImage = getPieceImage(piece);
                         const isClickable = isSquareClickable(piece);
                         const isLastMoveSquare = lastMove && 
@@ -392,7 +409,7 @@ const Board = ({ demoMode = false, analysisMode = false, position = null, boardF
                                 onClick={() => handleSquareClick(square)}
                             >
                                 {/* Show file coordinates on the bottom rank */}
-                                {(playerColor === 'white' ? rank === '1' : rank === '8') && (
+                                {(!effectiveBoardFlipped ? rank === '1' : rank === '8') && (
                                     <Coordinate 
                                         isLight={isLight}
                                         position="bottom-left"
@@ -402,7 +419,7 @@ const Board = ({ demoMode = false, analysisMode = false, position = null, boardF
                                 )}
                                 
                                 {/* Show rank coordinates on the leftmost file */}
-                                {(playerColor === 'white' ? file === 'a' : file === 'h') && (
+                                {(!effectiveBoardFlipped ? file === 'a' : file === 'h') && (
                                     <Coordinate 
                                         isLight={isLight}
                                         position="top-left"

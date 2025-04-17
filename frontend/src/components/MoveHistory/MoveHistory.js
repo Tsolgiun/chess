@@ -206,12 +206,20 @@ const parseMoveWithAnnotation = (move) => {
     return { move: cleanMove, annotation };
 };
 
-const MoveHistory = ({ moves = [] }) => {
+const MoveHistory = ({ 
+    moves = [], 
+    selectedMoveIndex = -1,
+    onMoveClick = null,
+    onFirstMove = null,
+    onPreviousMove = null,
+    onNextMove = null,
+    onLastMove = null
+}) => {
     const theme = useTheme();
     const { game } = useGame();
-    const [selectedMoveIndex, setSelectedMoveIndex] = useState(-1);
     const containerRef = useRef(null);
     const latestMoveRef = useRef(null);
+    const selectedMoveRef = useRef(null);
     
     // Group moves by pairs (White and Black)
     const groupedMoves = [];
@@ -234,37 +242,41 @@ const MoveHistory = ({ moves = [] }) => {
         }
     }, [moves.length]);
     
+    // Scroll to the selected move when it changes
+    useEffect(() => {
+        if (selectedMoveRef.current && containerRef.current) {
+            selectedMoveRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }, [selectedMoveIndex]);
+    
     const handleMoveClick = (index) => {
-        setSelectedMoveIndex(index);
-        // Here you would typically navigate to this position in the game
-        // This would require integration with your game state management
-        console.log(`Navigate to move ${index + 1}`);
+        if (onMoveClick) {
+            onMoveClick(index);
+        }
     };
     
     const handleFirstMove = () => {
-        setSelectedMoveIndex(-1);
-        // Navigate to starting position
+        if (onFirstMove) {
+            onFirstMove();
+        }
     };
     
     const handlePreviousMove = () => {
-        if (selectedMoveIndex > -1) {
-            setSelectedMoveIndex(selectedMoveIndex - 1);
-            // Navigate to previous move
-        } else {
-            setSelectedMoveIndex(-1);
+        if (onPreviousMove) {
+            onPreviousMove();
         }
     };
     
     const handleNextMove = () => {
-        if (selectedMoveIndex < moves.length - 1) {
-            setSelectedMoveIndex(selectedMoveIndex + 1);
-            // Navigate to next move
+        if (onNextMove) {
+            onNextMove();
         }
     };
     
     const handleLastMove = () => {
-        setSelectedMoveIndex(moves.length - 1);
-        // Navigate to last move
+        if (onLastMove) {
+            onLastMove();
+        }
     };
     
     return (
