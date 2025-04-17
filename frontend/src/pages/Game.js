@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import NavBar from '../components/NavBar/NavBar';
@@ -6,6 +6,10 @@ import { motion } from 'framer-motion';
 import Board from '../components/Board/Board';
 import GameInfo from '../components/GameInfo/GameInfo';
 import MoveHistory from '../components/MoveHistory/MoveHistory';
+import CapturedPieces from '../components/CapturedPieces/CapturedPieces';
+import Timer from '../components/Timer/Timer';
+import EvaluationBar from '../components/analysis/EvaluationBar';
+import AnalysisLines from '../components/analysis/AnalysisLines';
 import { useGame } from '../context/GameContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -34,13 +38,112 @@ const BoardWrapper = styled(motion.div)`
   transition: background-color 0.3s ease, color 0.3s ease;
 `;
 
-const ContentWrapper = styled(motion.div)`
+const ControlPanel = styled(motion.div)`
   background: ${({ theme }) => theme.colors.primary};
   color: ${({ theme }) => theme.colors.text};
   border-radius: 16px;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-  padding: 30px;
   transition: background-color 0.3s ease, color 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+`;
+
+const GameControlBar = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background: ${({ theme }) => theme.colors.secondary};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+`;
+
+const ControlButton = styled.button`
+  background: ${props => props.danger ? '#e74c3c' : props.primary ? ({ theme }) => theme.colors.accent : ({ theme }) => theme.colors.primary};
+  color: ${props => (props.danger || props.primary) ? '#fff' : ({ theme }) => theme.colors.text};
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    opacity: 0.9;
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const ControlButtonGroup = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const TabContainer = styled.div`
+  display: flex;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.secondary};
+`;
+
+const Tab = styled.div`
+  padding: 12px 20px;
+  cursor: pointer;
+  font-weight: ${props => props.active ? '600' : '400'};
+  color: ${props => props.active ? ({ theme }) => theme.colors.accent : ({ theme }) => theme.colors.text};
+  border-bottom: 2px solid ${props => props.active ? ({ theme }) => theme.colors.accent : 'transparent'};
+  transition: all 0.2s ease;
+  
+  &:hover {
+    color: ${({ theme }) => theme.colors.accent};
+  }
+`;
+
+const TabContent = styled.div`
+  display: ${props => props.active ? 'block' : 'none'};
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  
+  /* Scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: ${({ theme }) => theme.colors.primary};
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: ${({ theme }) => theme.colors.border};
+    border-radius: 4px;
+    
+    &:hover {
+      background: ${({ theme }) => theme.colors.accent};
+    }
+  }
+`;
+
+const GameStatusBar = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background: ${({ theme }) => theme.colors.highlight};
+  border-radius: 8px;
+  margin-bottom: 15px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.accent};
 `;
 
 const StatusMessage = styled.div`
@@ -60,16 +163,39 @@ const StatusMessage = styled.div`
 `;
 
 const Game = () => {
-  const { gameId } = useParams();
+  const { gameId: routeGameId } = useParams();
   const navigate = useNavigate();
   const theme = useTheme();
-  const { joinGame, isGameActive, status, moves } = useGame();
+  const [activeTab, setActiveTab] = useState('moves');
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  
+  const { 
+    joinGame, 
+    isGameActive, 
+    status, 
+    moves,
+    game, 
+    gameId, 
+    playerColor, 
+    boardFlipped, 
+    setBoardFlipped,
+    timeRemaining,
+    resetGameState,
+    resignGame,
+    offerDraw,
+    acceptDraw,
+    declineDraw,
+    drawOffered,
+    drawOfferFrom,
+    isAIGame,
+    gameOver
+  } = useGame();
 
   useEffect(() => {
-    if (gameId && !isGameActive) {
-      joinGame(gameId);
+    if (routeGameId && !isGameActive) {
+      joinGame(routeGameId);
     }
-  }, [gameId, joinGame, isGameActive]);
+  }, [routeGameId, joinGame, isGameActive]);
 
   useEffect(() => {
     let navigationTimer;
@@ -112,6 +238,15 @@ const Game = () => {
     );
   }
 
+  const handleNewGame = () => {
+    resetGameState();
+    navigate('/');
+  };
+
+  const handleFlipBoard = () => {
+    setBoardFlipped(!boardFlipped);
+  };
+
   return (
     <Container
       variants={containerVariants}
@@ -122,11 +257,107 @@ const Game = () => {
       <NavBar />
       <BoardWrapper>
         <Board />
+        {showAnalysis && <EvaluationBar evaluation={0} depth={15} nodes={150000} />}
       </BoardWrapper>
-      <ContentWrapper>
-        <MoveHistory moves={moves} />
-        <GameInfo />
-      </ContentWrapper>
+      <ControlPanel>
+        <GameControlBar>
+          <ControlButtonGroup>
+            <ControlButton primary onClick={handleFlipBoard}>
+              Flip Board
+            </ControlButton>
+            <ControlButton onClick={() => setShowAnalysis(!showAnalysis)}>
+              {showAnalysis ? 'Hide Analysis' : 'Show Analysis'}
+            </ControlButton>
+          </ControlButtonGroup>
+          
+          <ControlButtonGroup>
+            {!gameOver && (
+              <>
+                {!drawOffered && !isAIGame && (
+                  <ControlButton onClick={offerDraw}>
+                    Offer Draw
+                  </ControlButton>
+                )}
+                {drawOffered && drawOfferFrom !== playerColor && (
+                  <>
+                    <ControlButton primary onClick={acceptDraw}>
+                      Accept Draw
+                    </ControlButton>
+                    <ControlButton onClick={declineDraw}>
+                      Decline
+                    </ControlButton>
+                  </>
+                )}
+                <ControlButton danger onClick={resignGame}>
+                  Resign
+                </ControlButton>
+              </>
+            )}
+            {gameOver && (
+              <ControlButton primary onClick={handleNewGame}>
+                New Game
+              </ControlButton>
+            )}
+          </ControlButtonGroup>
+        </GameControlBar>
+        
+        <Timer 
+          whiteTime={timeRemaining.white}
+          blackTime={timeRemaining.black}
+          isWhiteTurn={game.turn() === 'w'}
+          isGameActive={isGameActive}
+        />
+        
+        <TabContainer>
+          <Tab 
+            active={activeTab === 'moves'} 
+            onClick={() => setActiveTab('moves')}
+          >
+            Moves
+          </Tab>
+          <Tab 
+            active={activeTab === 'analysis'} 
+            onClick={() => setActiveTab('analysis')}
+          >
+            Analysis
+          </Tab>
+          <Tab 
+            active={activeTab === 'info'} 
+            onClick={() => setActiveTab('info')}
+          >
+            Info
+          </Tab>
+        </TabContainer>
+        
+        <TabContent active={activeTab === 'moves'}>
+          <CapturedPieces position={game.fen()} />
+          <MoveHistory moves={moves} />
+        </TabContent>
+        
+        <TabContent active={activeTab === 'analysis'}>
+          <AnalysisLines 
+            lines={[
+              {
+                evaluation: 0.35,
+                depth: 18,
+                moves: ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'a6', 'Ba4', 'Nf6', 'O-O', 'Be7'],
+                info: 'Ruy Lopez, Berlin Defense'
+              },
+              {
+                evaluation: 0.25,
+                depth: 17,
+                moves: ['d4', 'd5', 'c4', 'e6', 'Nc3', 'Nf6', 'Bg5', 'Be7']
+              }
+            ]}
+            engineName="Stockfish 16"
+          />
+        </TabContent>
+        
+        <TabContent active={activeTab === 'info'}>
+          <GameStatusBar>{status}</GameStatusBar>
+          <GameInfo />
+        </TabContent>
+      </ControlPanel>
     </Container>
   );
 };

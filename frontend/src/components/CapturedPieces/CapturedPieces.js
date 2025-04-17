@@ -1,51 +1,130 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import { useTheme } from '../../context/ThemeContext';
+
+const fadeIn = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
 
 const Container = styled.div`
     display: flex;
     flex-direction: column;
     gap: 12px;
     margin-bottom: 20px;
+    background: ${({ theme }) => theme.colors.secondary};
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+`;
+
+const Title = styled.h3`
+    margin: 0 0 12px 0;
+    font-size: 1.1rem;
+    color: ${({ theme }) => theme.colors.text};
+    font-weight: 600;
+    transition: color 0.3s ease;
 `;
 
 const Row = styled.div`
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    padding: 8px 12px;
-    background: ${props => props.isLight ? ({ theme }) => theme.colors.secondary : ({ theme }) => theme.colors.highlight};
-    border-radius: 8px;
+    padding: 10px 15px;
+    background: ${props => props.isLight ? ({ theme }) => theme.colors.primary : ({ theme }) => `${theme.colors.primary}80`};
+    border-radius: 10px;
     min-height: 40px;
-    transition: background-color 0.3s ease;
+    transition: all 0.3s ease;
+    position: relative;
+    
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+    }
+    
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: ${props => props.advantage > 0 ? ({ theme }) => theme.colors.accent : 
+                              props.advantage < 0 ? '#e74c3c' : 'transparent'};
+        border-top-left-radius: 10px;
+        border-bottom-left-radius: 10px;
+    }
 `;
 
 const PiecesContainer = styled.div`
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: 6px;
+    animation: ${fadeIn} 0.3s ease-out;
+`;
+
+const PieceGroup = styled.div`
+    display: flex;
+    align-items: center;
+    margin-right: 8px;
+    position: relative;
 `;
 
 const Piece = styled.div`
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     background-image: url(${props => props.image});
     background-size: contain;
     background-position: center;
     background-repeat: no-repeat;
-    filter: ${props => props.isDimmed ? 'brightness(0.8)' : 'none'};
-    transition: transform 0.2s ease;
+    filter: ${props => props.isDimmed ? 'brightness(0.8)' : 'drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.2))'};
+    transition: all 0.2s ease;
 
     &:hover {
-        transform: scale(1.1);
+        transform: scale(1.15);
+        filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.3));
     }
 `;
 
-const AdvantageText = styled.span`
-    margin-left: auto;
+const PieceCount = styled.span`
+    position: absolute;
+    bottom: -5px;
+    right: -5px;
+    background: ${({ theme }) => theme.colors.secondary};
+    color: ${({ theme }) => theme.colors.text};
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-weight: 600;
-    font-size: 0.9rem;
-    color: ${props => props.advantage > 0 ? ({ theme }) => theme.colors.accent : props.advantage < 0 ? '#e74c3c' : ({ theme }) => theme.colors.text};
-    transition: color 0.3s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+`;
+
+const MaterialDifference = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: ${props => props.advantage > 0 ? ({ theme }) => theme.colors.accent : 
+                      props.advantage < 0 ? '#e74c3c' : ({ theme }) => theme.colors.text};
+    padding: 4px 8px;
+    background: ${({ theme }) => `${theme.colors.secondary}80`};
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    
+    &::before {
+        content: ${props => props.advantage > 0 ? '"+"' : ''};
+    }
 `;
 
 const CapturedPieces = ({ position }) => {
@@ -113,48 +192,64 @@ const CapturedPieces = ({ position }) => {
     const captured = calculateCapturedPieces();
     const advantage = calculateAdvantage(captured);
 
-    const renderPieces = (color) => {
-        const pieces = [];
+    const renderPieceGroups = (color) => {
+        const pieceGroups = [];
         const pieceTypes = ['q', 'r', 'b', 'n', 'p'];
+        const opponentColor = color === 'w' ? 'black' : 'white';
         
         pieceTypes.forEach(type => {
-            for (let i = 0; i < captured[color][type]; i++) {
-                pieces.push(
-                    <Piece 
-                        key={`${color}-${type}-${i}`}
-                        image={`/pieces/${color === 'w' ? 'black' : 'white'}-${
-                            type === 'p' ? 'pawn' :
-                            type === 'n' ? 'knight' :
-                            type === 'b' ? 'bishop' :
-                            type === 'r' ? 'rook' :
-                            'queen'
-                        }.png`}
-                        isDimmed={advantage === 0}
-                    />
+            const count = captured[color][type];
+            if (count > 0) {
+                const pieceType = 
+                    type === 'p' ? 'pawn' :
+                    type === 'n' ? 'knight' :
+                    type === 'b' ? 'bishop' :
+                    type === 'r' ? 'rook' : 'queen';
+                
+                pieceGroups.push(
+                    <PieceGroup key={`${color}-${type}`}>
+                        <Piece 
+                            image={`/pieces/${opponentColor}-${pieceType}.png`}
+                            isDimmed={advantage === 0}
+                        />
+                        {count > 1 && <PieceCount theme={theme}>{count}</PieceCount>}
+                    </PieceGroup>
                 );
             }
         });
         
-        return pieces;
+        return pieceGroups;
     };
 
     return (
-        <Container>
-            <Row isLight>
+        <Container theme={theme}>
+            <Title theme={theme}>Material</Title>
+            <Row 
+                isLight 
+                advantage={advantage}
+                theme={theme}
+            >
                 <PiecesContainer>
-                    {renderPieces('b')}
+                    {renderPieceGroups('b')}
                 </PiecesContainer>
-                {advantage !== 0 && <AdvantageText advantage={advantage}>
-                    {Math.abs(advantage)}
-                </AdvantageText>}
+                {advantage > 0 && (
+                    <MaterialDifference advantage={advantage} theme={theme}>
+                        {Math.abs(advantage)}
+                    </MaterialDifference>
+                )}
             </Row>
-            <Row>
+            <Row 
+                advantage={-advantage}
+                theme={theme}
+            >
                 <PiecesContainer>
-                    {renderPieces('w')}
+                    {renderPieceGroups('w')}
                 </PiecesContainer>
-                {advantage !== 0 && <AdvantageText advantage={-advantage}>
-                    {Math.abs(advantage)}
-                </AdvantageText>}
+                {advantage < 0 && (
+                    <MaterialDifference advantage={-advantage} theme={theme}>
+                        {Math.abs(advantage)}
+                    </MaterialDifference>
+                )}
             </Row>
         </Container>
     );

@@ -4,13 +4,11 @@ import styled, { keyframes } from 'styled-components';
 import { useGame } from '../../context/GameContext';
 import { useTheme } from '../../context/ThemeContext';
 import GameResultModal from '../GameResultModal/GameResultModal';
-import Timer from '../Timer/Timer';
-import CapturedPieces from '../CapturedPieces/CapturedPieces';
 
 const fadeIn = keyframes`
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(5px);
   }
   to {
     opacity: 1;
@@ -18,63 +16,48 @@ const fadeIn = keyframes`
   }
 `;
 
-const pulse = keyframes`
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  100% {
-    transform: scale(1);
-  }
-`;
-
 const Container = styled.div`
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    padding: 24px;
-    background: ${({ theme }) => theme.colors.primary};
-    color: ${({ theme }) => theme.colors.text};
-    border-radius: 12px;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    gap: 15px;
     animation: ${fadeIn} 0.5s ease-out;
-    transition: background-color 0.3s ease, color 0.3s ease;
+`;
 
-    /* Scrollbar styling */
-    &::-webkit-scrollbar {
-        width: 8px;
-    }
-    
-    &::-webkit-scrollbar-track {
-        background: ${({ theme }) => theme.colors.secondary};
-        border-radius: 4px;
-    }
-    
-    &::-webkit-scrollbar-thumb {
-        background: ${({ theme }) => theme.colors.border};
-        border-radius: 4px;
-        
-        &:hover {
-            background: ${({ theme }) => theme.colors.accent};
-        }
-    }
+const InfoCard = styled.div`
+    background: ${({ theme }) => theme.colors.primary};
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+    margin-bottom: 15px;
+`;
+
+const Title = styled.h3`
+    margin: 0 0 15px 0;
+    font-size: 1.1rem;
+    color: ${({ theme }) => theme.colors.text};
+    font-weight: 600;
+    transition: color 0.3s ease;
+    border-bottom: 1px solid ${({ theme }) => `${theme.colors.border}40`};
+    padding-bottom: 10px;
 `;
 
 const InfoRow = styled.div`
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 16px;
-    background: ${({ theme }) => theme.colors.secondary};
+    padding: 10px;
+    background: ${({ theme }) => `${theme.colors.secondary}80`};
     border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    transition: all 0.2s ease, background-color 0.3s ease;
+    margin-bottom: 10px;
+    transition: all 0.2s ease;
 
     &:hover {
-        transform: translateX(4px);
-        background: ${({ theme }) => theme.colors.highlight};
+        transform: translateX(2px);
+        background: ${({ theme }) => theme.colors.secondary};
+    }
+    
+    &:last-child {
+        margin-bottom: 0;
     }
 `;
 
@@ -82,79 +65,29 @@ const Label = styled.span`
     font-weight: 600;
     color: ${({ theme }) => theme.colors.text};
     font-size: 0.95rem;
-    transition: color 0.3s ease;
 `;
 
 const Value = styled.span`
     color: ${({ theme }) => theme.colors.accent};
     font-weight: 500;
     padding: 4px 8px;
-    background: ${({ theme }) => theme.colors.secondary};
-    border-radius: 4px;
-    font-size: 0.9rem;
-    transition: color 0.3s ease, background-color 0.3s ease;
-`;
-
-const Status = styled.div`
-    text-align: center;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: ${({ theme }) => theme.colors.accent};
-    padding: 12px;
-    background: ${({ theme }) => theme.colors.highlight};
-    border-radius: 8px;
-    margin-top: 5px;
-    animation: ${pulse} 2s infinite ease-in-out;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: color 0.3s ease, background-color 0.3s ease;
-`;
-
-const Button = styled.button`
-    padding: 10px 20px;
-    background: ${({ theme }) => theme.colors.accent};
-    color: ${({ theme }) => theme.isDarkMode ? '#000000' : '#ffffff'};
-    border: none;
+    background: ${({ theme }) => `${theme.colors.primary}80`};
     border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
     font-size: 0.9rem;
-    transition: all 0.3s ease, background-color 0.3s ease, color 0.3s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-
-    &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        opacity: 0.9;
-    }
-
-    &:active {
-        transform: translateY(0);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
 `;
 
 const GameInfo = () => {
     const navigate = useNavigate();
     const theme = useTheme();
     const {
-        game,
         gameId,
         playerColor,
         status,
         isGameActive,
         gameOver,
-        boardFlipped,
-        setBoardFlipped,
-        resetGameState,
-        resignGame,
-        offerDraw,
-        acceptDraw,
-        declineDraw,
-        drawOffered,
-        drawOfferFrom,
         isAIGame,
         opponentPlatform,
-        timeRemaining
+        resetGameState
     } = useGame();
 
     const handleNewGame = () => {
@@ -168,69 +101,28 @@ const GameInfo = () => {
 
     return (
         <Container>
-            <Timer 
-                whiteTime={timeRemaining.white}
-                blackTime={timeRemaining.black}
-                isWhiteTurn={game.turn() === 'w'}
-                isGameActive={isGameActive}
-            />
-            <CapturedPieces position={game.fen()} />
-            <InfoRow>
-                <Label>Game ID:</Label>
-                <Value>{gameId}</Value>
-            </InfoRow>
-            <InfoRow>
-                <Label>Your Color:</Label>
-                <Value>{playerColor}</Value>
-            </InfoRow>
-            {opponentPlatform && (
-                <InfoRow>
-                    <Label>Opponent Platform:</Label>
-                    <Value>{opponentPlatform}</Value>
+            <InfoCard theme={theme}>
+                <Title theme={theme}>Game Details</Title>
+                <InfoRow theme={theme}>
+                    <Label theme={theme}>Game ID</Label>
+                    <Value theme={theme}>{gameId}</Value>
                 </InfoRow>
-            )}
-            <InfoRow>
-                <Label>Board Orientation:</Label>
-                <Button onClick={() => setBoardFlipped(!boardFlipped)}>
-                    Flip Board
-                </Button>
-            </InfoRow>
-            {!gameOver && isGameActive && (
-                <InfoRow>
-                    <Label>Game Controls:</Label>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        {!drawOffered && !isAIGame && (
-                            <Button onClick={offerDraw}>
-                                Offer Draw
-                            </Button>
-                        )}
-                        {drawOffered && drawOfferFrom !== playerColor && (
-                            <>
-                                <Button onClick={acceptDraw}>
-                                    Accept Draw
-                                </Button>
-                                <Button onClick={declineDraw}>
-                                    Decline Draw
-                                </Button>
-                            </>
-                        )}
-                        <Button 
-                            onClick={resignGame}
-                            style={{ 
-                                background: theme.isDarkMode ? '#c0392b' : '#e74c3c'
-                            }}
-                        >
-                            Resign
-                        </Button>
-                    </div>
+                <InfoRow theme={theme}>
+                    <Label theme={theme}>Your Color</Label>
+                    <Value theme={theme}>{playerColor}</Value>
                 </InfoRow>
-            )}
-            {gameOver && (
-                <InfoRow>
-                    <Button onClick={handleNewGame}>New Game</Button>
+                <InfoRow theme={theme}>
+                    <Label theme={theme}>Game Type</Label>
+                    <Value theme={theme}>{isAIGame ? 'vs AI' : 'vs Human'}</Value>
                 </InfoRow>
-            )}
-            {!gameOver && <Status>{status}</Status>}
+                {opponentPlatform && (
+                    <InfoRow theme={theme}>
+                        <Label theme={theme}>Opponent</Label>
+                        <Value theme={theme}>{opponentPlatform}</Value>
+                    </InfoRow>
+                )}
+            </InfoCard>
+            
             <GameResultModal 
                 show={gameOver}
                 result={status}
