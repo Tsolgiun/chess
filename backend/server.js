@@ -76,6 +76,15 @@ app.post('/api/auth/login', AuthController.login);
 app.get('/api/profile', auth, AuthController.getProfile);
 app.put('/api/profile', auth, AuthController.updateProfile);
 
+// Blog routes
+const BlogController = require('./controllers/BlogController');
+app.get('/api/blog', BlogController.getAllBlogs);
+app.get('/api/blog/:id', BlogController.getBlogById);
+app.post('/api/blog', auth, BlogController.createBlog);
+app.put('/api/blog/:id', auth, BlogController.updateBlog);
+app.delete('/api/blog/:id', auth, BlogController.deleteBlog);
+app.get('/api/blog/tag/:tag', BlogController.getBlogsByTag);
+
 // Move calculation endpoint for Stockfish
 app.post('/api/stockfish/move', async (req, res) => {
     const { fen } = req.body;

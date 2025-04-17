@@ -162,6 +162,7 @@ const NavBar = () => {
           <FaSun className="sun-icon" />
           <FaMoon className="moon-icon" />
         </ThemeToggle>
+        <Button to="/blog">Blog</Button>
         {!user ? (
           <>
             <Button to="/login">Login</Button>

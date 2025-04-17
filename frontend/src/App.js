@@ -14,6 +14,8 @@ import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Analysis from './pages/Analysis';
 import Review from './pages/Review';
+import Blog from './pages/Blog';
+import BlogPost from './pages/BlogPost';
 import NavBar from './components/NavBar/NavBar';
 
 import './App.css';
@@ -93,6 +95,8 @@ const AnimatedRoutes = () => {
           } />
           <Route path="/analysis" element={<Analysis />} />
           <Route path="/review/:reviewGameId" element={<Review />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/:id" element={<BlogPost />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </motion.div>
